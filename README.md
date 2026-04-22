@@ -11,7 +11,6 @@ A sleek, luxury-themed online gaming website built with **Next.js 14**, **TypeSc
 - **Responsive design** — mobile-first, looks great on all devices
 - **Individual game pages** with full details for all 4 games
 - **VIP tier system** (Pearl → Jade → Gold → Dragon)
-- **Promotions section** with animated cards
 - **Luxury aesthetic**: Cinzel + Cormorant Garamond fonts, gold shimmer text, dark navy palette
 
 ---
@@ -75,7 +74,6 @@ lucky-pearl/
 │   ├── Navbar.tsx          # Fixed nav with scroll effect
 │   ├── Hero.tsx            # Animated hero + live jackpot
 │   ├── GamesSection.tsx    # 4 game cards with hover effects
-│   ├── PromotionsSection.tsx  # Bonus offers
 │   ├── VIPSection.tsx      # 4-tier VIP membership
 │   ├── SupportSection.tsx  # Trust + support features
 │   ├── AgeVerification.tsx # 18+ gate modal
@@ -106,7 +104,6 @@ Each game has a dedicated page at `/games/[slug]`:
 - **Colors**: Edit `tailwind.config.js` — `gold`, `pearl`, `navy` color scales
 - **Game data**: Edit the `gameData` object in `app/games/[slug]/page.tsx`
 - **Jackpot**: Modify `JACKPOT_START` in `components/Hero.tsx`
-- **Promotions**: Edit the `promotions` array in `components/PromotionsSection.tsx`
 - **VIP Tiers**: Edit the `tiers` array in `components/VIPSection.tsx`
 
 ---

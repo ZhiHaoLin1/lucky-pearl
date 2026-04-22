@@ -1,8 +1,9 @@
 import Navbar from '@/components/Navbar';
 import Hero from '@/components/Hero';
+import DailyLeaderboard from '@/components/DailyLeaderboard';
 import GamesSection from '@/components/GamesSection';
-import PromotionsSection from '@/components/PromotionsSection';
 import VIPSection from '@/components/VIPSection';
+import PaymentProcessorsSection from '@/components/PaymentProcessorsSection';
 import SupportSection from '@/components/SupportSection';
 import Footer from '@/components/Footer';
 import AgeVerification from '@/components/AgeVerification';
@@ -13,8 +14,9 @@ export default function Home() {
       <AgeVerification />
       <Navbar />
       <Hero />
+      <PaymentProcessorsSection />
+      <DailyLeaderboard />
       <GamesSection />
-      <PromotionsSection />
       <VIPSection />
       <SupportSection />
       <Footer />

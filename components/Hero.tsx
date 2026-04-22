@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState } from 'react';
 
-const JACKPOT_START = 4_872_341;
+const JACKPOT_START = 56_234;
+const JACKPOT_MAX = 99_999;
 
 export default function Hero() {
   const [jackpot, setJackpot] = useState(JACKPOT_START);
@@ -11,10 +12,14 @@ export default function Hero() {
 
   useEffect(() => {
     setMounted(true);
-    // Tick jackpot up
+    // Tick jackpot up (five figures only — caps at $99,999)
     const interval = setInterval(() => {
-      setJackpot((prev) => prev + Math.floor(Math.random() * 37 + 5));
-    }, 80);
+      setJackpot((prev) => {
+        if (prev >= JACKPOT_MAX) return JACKPOT_MAX;
+        const bump = Math.floor(Math.random() * 15 + 2);
+        return Math.min(JACKPOT_MAX, prev + bump);
+      });
+    }, 120);
     return () => clearInterval(interval);
   }, []);
 
@@ -145,10 +150,7 @@ export default function Hero() {
       </div>
 
       {/* Content */}
-      <div
-        className="relative z-10 text-center px-6 max-w-5xl mx-auto"
-        style={{ fontFamily: "'Cinzel', serif" }}
-      >
+      <div className="relative z-10 text-center px-6 max-w-5xl mx-auto">
         {/* Badge */}
         <div
           className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-gold-600/30 bg-gold-DEFAULT/5 mb-8 transition-all duration-1000 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
@@ -166,10 +168,9 @@ export default function Hero() {
 
         {/* Tagline */}
         <p
-          className={`text-pearl-200/60 text-lg sm:text-xl tracking-[0.25em] uppercase mb-3 transition-all duration-1000 delay-300 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'}`}
-          style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic' }}
+          className={`text-pearl-200/80 text-xl sm:text-2xl mb-4 transition-all duration-1000 delay-300 max-w-2xl mx-auto leading-relaxed ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'}`}
         >
-          Where Fortune Favors the Bold
+          Relax, play your favorites, and enjoy a little fun — at your own pace.
         </p>
 
         {/* Ornament divider */}
@@ -198,17 +199,17 @@ export default function Hero() {
         >
           <a
             href="#games"
-            className="group relative px-10 py-4 text-sm tracking-[0.25em] uppercase text-navy-900 font-bold overflow-hidden rounded btn-press"
+            className="group relative px-10 py-4 text-base tracking-wide text-navy-900 font-bold overflow-hidden rounded-lg btn-press"
             style={{ background: 'linear-gradient(135deg, #d4af37 0%, #f5d882 50%, #c99a14 100%)' }}
           >
             <span className="relative z-10">Play Now</span>
             <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
           </a>
           <a
-            href="#vip"
-            className="px-10 py-4 text-sm tracking-[0.25em] uppercase text-gold-400 border border-gold-600/40 rounded hover:border-gold-400 hover:bg-gold-DEFAULT/5 transition-all duration-300 btn-press"
+            href="#payments"
+            className="px-10 py-4 text-base tracking-wide text-gold-400 border border-gold-600/40 rounded-lg hover:border-gold-400 hover:bg-gold-DEFAULT/5 transition-all duration-300 btn-press font-semibold"
           >
-            VIP Club
+            Ways to pay
           </a>
         </div>
 
@@ -217,16 +218,16 @@ export default function Hero() {
           className={`mt-14 flex flex-wrap justify-center gap-8 transition-all duration-1000 delay-1000 ${mounted ? 'opacity-100' : 'opacity-0'}`}
         >
           {[
-            { label: 'Players Online', value: '12,847' },
-            { label: 'Games Available', value: '500+' },
-            { label: 'Total Payouts', value: '$48M+' },
-            { label: 'Member Rating', value: '4.9★' },
+            { label: 'Players Online', value: '1,482' },
+            { label: 'Games Available', value: '120+' },
+            { label: 'Total Payouts', value: '$6.4M+' },
+            { label: 'Member Rating', value: '4.6★' },
           ].map((stat) => (
             <div key={stat.label} className="text-center">
-              <div className="text-xl font-bold" style={{ color: '#d4af37', fontFamily: "'Cinzel', serif" }}>
+              <div className="text-2xl sm:text-3xl font-bold" style={{ color: '#d4af37' }}>
                 {stat.value}
               </div>
-              <div className="text-pearl-300/40 text-xs tracking-widest uppercase">{stat.label}</div>
+              <div className="text-pearl-300/50 text-sm tracking-wide uppercase mt-1">{stat.label}</div>
             </div>
           ))}
         </div>

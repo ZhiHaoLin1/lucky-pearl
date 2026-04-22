@@ -1,13 +1,13 @@
 const supportItems = [
   {
-    icon: '💬',
-    title: '24/7 Live Chat',
-    description: 'Our support dragons are always awake. Connect with a live agent in under 30 seconds, any time of day.',
+    icon: '💳',
+    title: 'Deposits 24/7',
+    description: 'Deposits are accepted any time, day or night, so you can fund your account whenever it is convenient.',
   },
   {
-    icon: '📧',
-    title: 'Email Support',
-    description: 'Send us your queries and receive detailed responses from our dedicated gaming experts.',
+    icon: '📱',
+    title: 'Text Support',
+    description: 'Reach our team by text message. Live support is available daily from 10:00 AM to 10:00 PM EST.',
   },
   {
     icon: '🔐',
@@ -16,8 +16,8 @@ const supportItems = [
   },
   {
     icon: '⚡',
-    title: 'Instant Payouts',
-    description: 'Withdraw your winnings in minutes. We process crypto instantly and bank transfers within 24 hours.',
+    title: 'Withdrawals 10AM-10PM EST',
+    description: 'Withdrawal reviews and payout processing are handled daily between 10:00 AM and 10:00 PM EST.',
   },
 ];
 
