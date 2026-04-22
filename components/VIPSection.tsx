@@ -5,7 +5,7 @@ const tiers = [
     color: '#b5a285',
     depositLine: 'Lifetime deposits of $0+',
     withdrawalLimit: '$100/day',
-    features: ['Entry tier for every member', 'Weekly bonus access', 'Tournament access'],
+    features: ['Entry tier for every member', 'Daily bonus on certain games'],
   },
   {
     name: 'Jade',
@@ -13,7 +13,7 @@ const tiers = [
     color: '#34d399',
     depositLine: 'Lifetime deposits of $2,500+',
     withdrawalLimit: '$200/day',
-    features: ['Daily reload offers', 'Birthday gift', 'Priority text support'],
+    features: ['Referral bonus', 'Birthday gift', 'Priority text support'],
   },
   {
     name: 'Gold',
@@ -21,7 +21,7 @@ const tiers = [
     color: '#d4af37',
     depositLine: 'Lifetime deposits of $10,000+',
     withdrawalLimit: '$300/day',
-    features: ['VIP lounge access', 'Event invitations', 'Higher bet limits'],
+    features: ['Event invitations'],
     highlighted: true,
   },
   {
@@ -30,7 +30,7 @@ const tiers = [
     color: '#ff6b35',
     depositLine: 'Lifetime deposits of $25,000+',
     withdrawalLimit: '$500/day',
-    features: ['Top daily cash-out cap', 'Private tournaments', 'Luxury gifts program'],
+    features: ['Top daily cash-out cap', 'Request new game platforms'],
   },
 ];
 
