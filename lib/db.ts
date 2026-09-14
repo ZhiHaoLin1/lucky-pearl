@@ -51,6 +51,28 @@ export function ensureSchema() {
             read_at TEXT
           )`
         ),
+        db.execute(
+          `CREATE TABLE IF NOT EXISTS deposits (
+            id TEXT PRIMARY KEY,
+            user_id TEXT NOT NULL,
+            amount_cents INTEGER NOT NULL,
+            method TEXT,
+            note TEXT,
+            recorded_by_admin_id TEXT,
+            created_at TEXT NOT NULL DEFAULT (datetime('now'))
+          )`
+        ),
+        db.execute(
+          `CREATE TABLE IF NOT EXISTS withdrawals (
+            id TEXT PRIMARY KEY,
+            user_id TEXT NOT NULL,
+            amount_cents INTEGER NOT NULL,
+            status TEXT NOT NULL DEFAULT 'pending',
+            created_at TEXT NOT NULL DEFAULT (datetime('now')),
+            processed_at TEXT,
+            processed_by_admin_id TEXT
+          )`
+        ),
       ]);
     })();
   }

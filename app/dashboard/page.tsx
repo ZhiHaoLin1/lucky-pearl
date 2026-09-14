@@ -4,8 +4,11 @@ import { Gem, Mail, Phone, CalendarDays } from 'lucide-react';
 import { db, ensureSchema } from '@/lib/db';
 import { getSessionUser } from '@/lib/auth';
 import { gamePlayUrls } from '@/lib/gamePlayUrls';
+import { getFinanceSummary } from '@/lib/finance';
+import { getNextTier } from '@/lib/vip';
 import LogoutButton from './LogoutButton';
 import InboxClient from './InboxClient';
+import DashboardTabs from './DashboardTabs';
 
 export const dynamic = 'force-dynamic';
 
@@ -50,6 +53,19 @@ export default async function DashboardPage() {
     day: 'numeric',
   });
 
+  const financeSummary = await getFinanceSummary(user.id);
+  const nextTier = getNextTier(financeSummary.tier);
+  const withdrawalsResult = await db.execute({
+    sql: 'SELECT id, amount_cents, status, created_at FROM withdrawals WHERE user_id = ? ORDER BY created_at DESC',
+    args: [user.id],
+  });
+  const initialWithdrawals = withdrawalsResult.rows.map((row) => ({
+    id: String(row.id),
+    amount_cents: Number(row.amount_cents),
+    status: String(row.status),
+    created_at: String(row.created_at),
+  }));
+
   return (
     <main
       className="min-h-screen pb-20"
@@ -84,14 +100,16 @@ export default async function DashboardPage() {
           <p className="text-pearl-300/60 text-base">Manage your account and jump straight into your games.</p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-12">
-          <div className="lg:col-span-1 rounded-2xl border border-gold-600/25 bg-navy-800/60 p-6">
-            <h2
-              className="text-lg font-bold text-white mb-5"
-              style={{ fontFamily: "'Cinzel', serif" }}
-            >
-              Profile
-            </h2>
+        <DashboardTabs
+          overview={
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="lg:col-span-1 rounded-2xl border border-gold-600/25 bg-navy-800/60 p-6">
+                <h2
+                  className="text-lg font-bold text-white mb-5"
+                  style={{ fontFamily: "'Cinzel', serif" }}
+                >
+                  Profile
+                </h2>
             <div className="space-y-4 text-sm">
               <div className="flex items-start gap-3">
                 <Mail className="w-4 h-4 mt-0.5 text-gold-400 shrink-0" />
@@ -162,8 +180,18 @@ export default async function DashboardPage() {
                 </div>
               ))}
             </div>
-          </div>
-        </div>
+              </div>
+            </div>
+          }
+          withdrawProps={{
+            tier: financeSummary.tier,
+            nextTier,
+            lifetimeDepositsCents: financeSummary.lifetimeDepositsCents,
+            todaysWithdrawnCents: financeSummary.todaysWithdrawnCents,
+            remainingTodayCents: financeSummary.remainingTodayCents,
+            initialWithdrawals,
+          }}
+        />
 
         <InboxClient initialMessages={messages} />
 

@@ -1,38 +1,13 @@
-const tiers = [
-  {
-    name: 'Pearl',
-    icon: '🪬',
-    color: '#b5a285',
-    depositLine: 'Lifetime deposits of $0+',
-    withdrawalLimit: '$100/day',
-    features: ['Entry tier for every member', 'Daily bonus on all games'],
-  },
-  {
-    name: 'Jade',
-    icon: '💚',
-    color: '#34d399',
-    depositLine: 'Lifetime deposits of $2,500+',
-    withdrawalLimit: '$200/day',
-    features: ['Referral bonus', 'Birthday gift', 'Priority text support'],
-  },
-  {
-    name: 'Gold',
-    icon: '⚜️',
-    color: '#d4af37',
-    depositLine: 'Lifetime deposits of $10,000+',
-    withdrawalLimit: '$300/day',
-    features: ['Major holiday bonus', 'Extended cashout hours starting 9AM'],
-    highlighted: true,
-  },
-  {
-    name: 'Dragon',
-    icon: '🐉',
-    color: '#ff6b35',
-    depositLine: 'Lifetime deposits of $25,000+',
-    withdrawalLimit: '$500/day',
-    features: ['Request new game platforms', 'No-fee deposit day once a month'],
-  },
-];
+import { VIP_TIERS, formatCents } from '@/lib/vip';
+
+const tiers = VIP_TIERS.map((tier) => ({
+  ...tier,
+  depositLine:
+    tier.minDepositsCents === 0
+      ? 'Lifetime deposits of $0+'
+      : `Lifetime deposits of ${formatCents(tier.minDepositsCents).replace('.00', '')}+`,
+  withdrawalLimit: `${formatCents(tier.dailyLimitCents).replace('.00', '')}/day`,
+}));
 
 export default function VIPSection() {
   return (

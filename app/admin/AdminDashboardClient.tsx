@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Mail, Phone, Send, Trash2 } from 'lucide-react';
+import AdminFinancePanel from './AdminFinancePanel';
 
 export type AdminCustomer = {
   id: string;
@@ -35,6 +36,7 @@ export default function AdminDashboardClient({ customers: initialCustomers }: { 
   const [isSending, setIsSending] = useState(false);
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [detailTab, setDetailTab] = useState<'messages' | 'finance'>('messages');
 
   const activeCustomer = customers.find((customer) => customer.id === activeId) ?? null;
 
@@ -206,7 +208,14 @@ export default function AdminDashboardClient({ customers: initialCustomers }: { 
                   className="w-4 h-4 shrink-0 accent-gold-500"
                   aria-label={`Select ${customer.fullName}`}
                 />
-                <button type="button" onClick={() => setActiveId(customer.id)} className="flex-1 min-w-0 text-left">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveId(customer.id);
+                    setDetailTab('messages');
+                  }}
+                  className="flex-1 min-w-0 text-left"
+                >
                   <p className="text-pearl-100 font-semibold text-sm truncate">{customer.fullName}</p>
                   <p className="text-pearl-300/60 text-xs truncate">{customer.email}</p>
                 </button>
@@ -253,65 +262,88 @@ export default function AdminDashboardClient({ customers: initialCustomers }: { 
                 </button>
               </div>
 
-              <div className="flex-1 min-h-[200px] max-h-[320px] overflow-y-auto space-y-3 mb-5">
-                {messagesLoading ? (
-                  <p className="text-pearl-300/50 text-sm">Loading messages…</p>
-                ) : messages.length === 0 ? (
-                  <p className="text-pearl-300/50 text-sm">No messages in this thread yet.</p>
-                ) : (
-                  messages.map((message) => {
-                    const fromAdmin = Boolean(message.sender_admin_id);
-                    return (
-                      <div
-                        key={message.id}
-                        className={`group rounded-xl border px-4 py-3 flex items-start justify-between gap-3 ${
-                          fromAdmin
-                            ? 'border-gold-500/30 bg-gold-500/5 ml-8'
-                            : 'border-white/10 bg-navy-900/60 mr-8'
-                        }`}
-                      >
-                        <div className="min-w-0">
-                          <p className="text-pearl-300/50 text-[10px] uppercase tracking-wider mb-1">
-                            {fromAdmin ? 'You' : activeCustomer.fullName}
-                          </p>
-                          <p className="text-pearl-100 text-sm whitespace-pre-wrap">{message.body}</p>
-                          <p className="text-pearl-300/40 text-xs mt-1.5">
-                            {formatSqliteDate(message.created_at)}
-                            {message.read_at ? ' · Read' : ' · Unread'}
-                          </p>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteMessage(message.id)}
-                          className="shrink-0 text-pearl-300/40 hover:text-red-300 opacity-0 group-hover:opacity-100 transition-opacity"
-                          aria-label="Delete message"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    );
-                  })
-                )}
+              <div className="flex gap-2 mb-4 border-b border-white/10">
+                {(['messages', 'finance'] as const).map((key) => (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => setDetailTab(key)}
+                    className={`px-4 py-2 text-sm font-semibold border-b-2 -mb-px transition-colors ${
+                      detailTab === key
+                        ? 'border-gold-400 text-gold-400'
+                        : 'border-transparent text-pearl-300/60 hover:text-pearl-100'
+                    }`}
+                  >
+                    {key === 'messages' ? 'Messages' : 'Deposits & Withdrawals'}
+                  </button>
+                ))}
               </div>
 
-              <form onSubmit={handleSend} className="flex gap-3">
-                <textarea
-                  value={messageBody}
-                  onChange={(event) => setMessageBody(event.target.value)}
-                  placeholder="Write a message…"
-                  rows={2}
-                  required
-                  className="flex-1 rounded-xl bg-navy-900 border border-gold-600/25 px-4 py-3 text-sm text-pearl-100 focus:border-gold-400 focus:outline-none focus:ring-2 focus:ring-gold-400/30 resize-none"
-                />
-                <button
-                  type="submit"
-                  disabled={isSending}
-                  className="shrink-0 px-5 rounded-xl bg-gold-gradient text-navy-900 font-bold flex items-center gap-2 disabled:opacity-60"
-                >
-                  <Send className="w-4 h-4" />
-                  {isSending ? 'Sending…' : 'Send'}
-                </button>
-              </form>
+              {detailTab === 'finance' ? (
+                <AdminFinancePanel customerId={activeCustomer.id} />
+              ) : (
+                <>
+                  <div className="flex-1 min-h-[200px] max-h-[320px] overflow-y-auto space-y-3 mb-5">
+                    {messagesLoading ? (
+                      <p className="text-pearl-300/50 text-sm">Loading messages…</p>
+                    ) : messages.length === 0 ? (
+                      <p className="text-pearl-300/50 text-sm">No messages in this thread yet.</p>
+                    ) : (
+                      messages.map((message) => {
+                        const fromAdmin = Boolean(message.sender_admin_id);
+                        return (
+                          <div
+                            key={message.id}
+                            className={`group rounded-xl border px-4 py-3 flex items-start justify-between gap-3 ${
+                              fromAdmin
+                                ? 'border-gold-500/30 bg-gold-500/5 ml-8'
+                                : 'border-white/10 bg-navy-900/60 mr-8'
+                            }`}
+                          >
+                            <div className="min-w-0">
+                              <p className="text-pearl-300/50 text-[10px] uppercase tracking-wider mb-1">
+                                {fromAdmin ? 'You' : activeCustomer.fullName}
+                              </p>
+                              <p className="text-pearl-100 text-sm whitespace-pre-wrap">{message.body}</p>
+                              <p className="text-pearl-300/40 text-xs mt-1.5">
+                                {formatSqliteDate(message.created_at)}
+                                {message.read_at ? ' · Read' : ' · Unread'}
+                              </p>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteMessage(message.id)}
+                              className="shrink-0 text-pearl-300/40 hover:text-red-300 opacity-0 group-hover:opacity-100 transition-opacity"
+                              aria-label="Delete message"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+
+                  <form onSubmit={handleSend} className="flex gap-3">
+                    <textarea
+                      value={messageBody}
+                      onChange={(event) => setMessageBody(event.target.value)}
+                      placeholder="Write a message…"
+                      rows={2}
+                      required
+                      className="flex-1 rounded-xl bg-navy-900 border border-gold-600/25 px-4 py-3 text-sm text-pearl-100 focus:border-gold-400 focus:outline-none focus:ring-2 focus:ring-gold-400/30 resize-none"
+                    />
+                    <button
+                      type="submit"
+                      disabled={isSending}
+                      className="shrink-0 px-5 rounded-xl bg-gold-gradient text-navy-900 font-bold flex items-center gap-2 disabled:opacity-60"
+                    >
+                      <Send className="w-4 h-4" />
+                      {isSending ? 'Sending…' : 'Send'}
+                    </button>
+                  </form>
+                </>
+              )}
             </>
           )}
         </div>
