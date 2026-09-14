@@ -12,14 +12,14 @@ export default function Hero() {
 
   useEffect(() => {
     setMounted(true);
-    // Tick jackpot up (five figures only — caps at $99,999)
+    // Tick jackpot up slowly, like a real progressive meter (five figures only — caps at $99,999)
     const interval = setInterval(() => {
       setJackpot((prev) => {
         if (prev >= JACKPOT_MAX) return JACKPOT_MAX;
-        const bump = Math.floor(Math.random() * 15 + 2);
+        const bump = Math.floor(Math.random() * 4 + 1);
         return Math.min(JACKPOT_MAX, prev + bump);
       });
-    }, 120);
+    }, 5000);
     return () => clearInterval(interval);
   }, []);
 

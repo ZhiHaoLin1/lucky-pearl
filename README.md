@@ -56,6 +56,18 @@ The Log In modal has a "Forgot password?" link → `/api/auth/forgot-password` e
 
 Without `RESEND_API_KEY` set, reset requests fail silently (logged server-side) — the UI always shows a generic "check your email" message either way, so it never reveals whether an account exists for a given email.
 
+### Admin dashboard & customer messaging
+
+Every account has a `role` (`customer` or `admin`). Admins log in through the same "Log In" modal as everyone else — the only difference is where they land.
+
+**Creating your admin account**: go to `/admin/register` (a plain page, not linked anywhere on the site) and enter the `ADMIN_INVITE_CODE` value from your environment along with your name/email/password. Anyone who knows that code can make themselves an admin, so keep it private — rotate it in your env vars if it ever leaks.
+
+**Admin dashboard** (`/admin`): lists every customer account and lets you send them a message from a simple thread view (`app/admin/AdminDashboardClient.tsx`, `app/api/admin/messages/route.ts`).
+
+**Customer inbox**: messages an admin sends show up in an "Inbox" section on the customer's `/dashboard`, with an unread badge — opening the dashboard marks them read.
+
+Customer signups still notify `DISCORD_WEBHOOK_URL` (unchanged) — that's separate from the in-app inbox, which is for you to message customers back.
+
 ---
 
 ## 📦 Deploy to Vercel
@@ -100,6 +112,10 @@ lucky-pearl/
 │   ├── reset-password/
 │   │   ├── page.tsx        # Suspense wrapper (needs useSearchParams)
 │   │   └── ResetPasswordForm.tsx
+│   ├── admin/
+│   │   ├── page.tsx                 # Admin dashboard (protected, role check)
+│   │   ├── AdminDashboardClient.tsx # Customer list + message composer
+│   │   └── register/page.tsx        # Invite-code-gated admin signup (unlinked)
 │   ├── api/auth/
 │   │   ├── signup/route.ts          # Create account + start session
 │   │   ├── login/route.ts           # Verify credentials + start session
@@ -107,6 +123,9 @@ lucky-pearl/
 │   │   ├── me/route.ts              # Current session lookup (for the navbar)
 │   │   ├── forgot-password/route.ts # Email a reset link
 │   │   └── reset-password/route.ts  # Consume a reset link, set new password
+│   ├── api/admin/
+│   │   ├── register/route.ts        # Create an admin account (invite code)
+│   │   └── messages/route.ts        # List/send messages to a customer
 │   └── games/
 │       └── [slug]/
 │           └── page.tsx    # Individual game pages

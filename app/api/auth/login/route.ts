@@ -24,7 +24,7 @@ export async function POST(request: Request) {
     }
 
     const result = await db.execute({
-      sql: 'SELECT id, full_name, password_hash FROM users WHERE email = ?',
+      sql: 'SELECT id, full_name, password_hash, role FROM users WHERE email = ?',
       args: [email],
     });
     const row = result.rows[0];
@@ -38,7 +38,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Invalid email or password.' }, { status: 401 });
     }
 
-    const response = NextResponse.json({ ok: true, fullName: row.full_name });
+    const response = NextResponse.json({ ok: true, fullName: row.full_name, role: row.role });
     await attachSessionCookie(response, String(row.id));
     return response;
   } catch {

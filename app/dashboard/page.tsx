@@ -1,9 +1,8 @@
 import Link from 'next/link';
-import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
-import { Gem, Mail, Phone, CalendarDays } from 'lucide-react';
+import { Gem, Mail, Phone, CalendarDays, Inbox } from 'lucide-react';
 import { db, ensureSchema } from '@/lib/db';
-import { SESSION_COOKIE, verifySessionToken } from '@/lib/auth';
+import { getSessionUser } from '@/lib/auth';
 import { gamePlayUrls } from '@/lib/gamePlayUrls';
 import LogoutButton from './LogoutButton';
 
@@ -17,23 +16,33 @@ const games: Array<{ slug: keyof typeof gamePlayUrls; name: string; emoji: strin
 ];
 
 export default async function DashboardPage() {
-  const token = cookies().get(SESSION_COOKIE)?.value;
-  const userId = token ? await verifySessionToken(token) : null;
-  if (!userId) {
-    redirect('/');
-  }
-
-  await ensureSchema();
-  const result = await db.execute({
-    sql: 'SELECT full_name, email, phone, preferred_game, created_at FROM users WHERE id = ?',
-    args: [userId],
-  });
-  const user = result.rows[0];
+  const user = await getSessionUser();
   if (!user) {
     redirect('/');
   }
 
-  const memberSince = new Date(String(user.created_at).replace(' ', 'T') + 'Z').toLocaleDateString('en-US', {
+  await ensureSchema();
+
+  const messagesResult = await db.execute({
+    sql: 'SELECT id, body, created_at, read_at FROM messages WHERE user_id = ? ORDER BY created_at DESC',
+    args: [user.id],
+  });
+  const messages = messagesResult.rows.map((row) => ({
+    id: String(row.id),
+    body: String(row.body),
+    createdAt: String(row.created_at),
+    wasUnread: !row.read_at,
+  }));
+
+  const unreadIds = messages.filter((message) => message.wasUnread).map((message) => message.id);
+  if (unreadIds.length > 0) {
+    await db.execute({
+      sql: 'UPDATE messages SET read_at = datetime(\'now\') WHERE user_id = ? AND read_at IS NULL',
+      args: [user.id],
+    });
+  }
+
+  const memberSince = new Date(user.createdAt.replace(' ', 'T') + 'Z').toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
@@ -68,7 +77,7 @@ export default async function DashboardPage() {
             className="text-3xl sm:text-4xl font-bold text-gold-shimmer mb-2"
             style={{ fontFamily: "'Cinzel', serif" }}
           >
-            Welcome back, {String(user.full_name).split(' ')[0]}
+            Welcome back, {user.fullName.split(' ')[0]}
           </h1>
           <p className="text-pearl-300/60 text-base">Manage your account and jump straight into your games.</p>
         </div>
@@ -86,14 +95,14 @@ export default async function DashboardPage() {
                 <Mail className="w-4 h-4 mt-0.5 text-gold-400 shrink-0" />
                 <div>
                   <p className="text-pearl-300/50 text-xs uppercase tracking-wider">Email</p>
-                  <p className="text-pearl-100 break-all">{String(user.email)}</p>
+                  <p className="text-pearl-100 break-all">{user.email}</p>
                 </div>
               </div>
               <div className="flex items-start gap-3">
                 <Phone className="w-4 h-4 mt-0.5 text-gold-400 shrink-0" />
                 <div>
                   <p className="text-pearl-300/50 text-xs uppercase tracking-wider">Phone</p>
-                  <p className="text-pearl-100">{String(user.phone)}</p>
+                  <p className="text-pearl-100">{user.phone}</p>
                 </div>
               </div>
               <div className="flex items-start gap-3">
@@ -128,7 +137,7 @@ export default async function DashboardPage() {
                       >
                         {game.name}
                       </Link>
-                      {String(user.preferred_game) === game.name && (
+                      {user.preferredGame === game.name && (
                         <span className="text-[10px] uppercase tracking-wider" style={{ color: game.accentColor }}>
                           Your favorite
                         </span>
@@ -152,6 +161,40 @@ export default async function DashboardPage() {
               ))}
             </div>
           </div>
+        </div>
+
+        <div className="rounded-2xl border border-gold-600/25 bg-navy-800/60 p-6 mb-12">
+          <div className="flex items-center gap-2 mb-5">
+            <Inbox className="w-5 h-5 text-gold-400" />
+            <h2 className="text-lg font-bold text-white" style={{ fontFamily: "'Cinzel', serif" }}>
+              Inbox
+            </h2>
+            {unreadIds.length > 0 && (
+              <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-gold-500/20 text-gold-400">
+                {unreadIds.length} new
+              </span>
+            )}
+          </div>
+
+          {messages.length === 0 ? (
+            <p className="text-pearl-300/60 text-sm">No messages yet.</p>
+          ) : (
+            <div className="space-y-3">
+              {messages.map((message) => (
+                <div
+                  key={message.id}
+                  className={`rounded-xl border px-4 py-3.5 ${
+                    message.wasUnread ? 'border-gold-500/40 bg-gold-500/5' : 'border-white/10 bg-navy-900/60'
+                  }`}
+                >
+                  <p className="text-pearl-100 text-sm whitespace-pre-wrap">{message.body}</p>
+                  <p className="text-pearl-300/40 text-xs mt-1.5">
+                    {new Date(message.createdAt.replace(' ', 'T') + 'Z').toLocaleString('en-US')}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="rounded-2xl border border-gold-600/25 bg-navy-800/40 p-6 text-center">

@@ -8,7 +8,7 @@ import { Menu, X, Gem, Gamepad2, Wallet, Headphones } from 'lucide-react';
 const navLinks = [
   { label: 'Games', href: '#games' },
   { label: 'Payments', href: '#payments' },
-  { label: 'Jackpots', href: '#jackpots' },
+  { label: 'Jackpots', href: '#leaderboard' },
   { label: 'VIP Club', href: '#vip' },
   { label: 'Support', href: '#support' },
 ];
@@ -26,6 +26,7 @@ export default function Navbar() {
 
   const [authLoading, setAuthLoading] = useState(true);
   const [loggedIn, setLoggedIn] = useState(false);
+  const [role, setRole] = useState<string | null>(null);
 
   const [joinOpen, setJoinOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -62,6 +63,7 @@ export default function Navbar() {
       .then((data) => {
         if (cancelled) return;
         setLoggedIn(Boolean(data?.loggedIn));
+        setRole(data?.role ?? null);
       })
       .catch(() => {})
       .finally(() => {
@@ -166,7 +168,8 @@ export default function Navbar() {
       setLoginOpen(false);
       setLoginData({ email: '', password: '' });
       setLoggedIn(true);
-      router.push('/dashboard');
+      setRole(data?.role ?? null);
+      router.push(data?.role === 'admin' ? '/admin' : '/dashboard');
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Could not log you in.';
       setLoginMessage(message);
@@ -222,10 +225,10 @@ export default function Navbar() {
 
   const goToDashboard = () => {
     setMobileOpen(false);
-    router.push('/dashboard');
+    router.push(role === 'admin' ? '/admin' : '/dashboard');
   };
 
-  const primaryCtaLabel = authLoading ? 'Join Now' : loggedIn ? 'Dashboard' : 'Join Now';
+  const primaryCtaLabel = authLoading ? 'Join Now' : loggedIn ? (role === 'admin' ? 'Admin' : 'Dashboard') : 'Join Now';
   const primaryCtaAction = loggedIn ? goToDashboard : showJoinForm;
 
   return (
