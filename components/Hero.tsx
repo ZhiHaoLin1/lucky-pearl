@@ -99,7 +99,7 @@ export default function Hero() {
   return (
     <section
       id="home"
-      className="relative min-h-screen flex items-center justify-center overflow-hidden"
+      className="relative min-h-screen flex items-center justify-center overflow-hidden pt-20 pb-24 sm:pt-24 sm:pb-20 lg:pb-0"
       style={{
         background: 'radial-gradient(ellipse at 50% 0%, #111f38 0%, #070c1a 40%, #04060f 100%)',
       }}
@@ -151,20 +151,18 @@ export default function Hero() {
 
       {/* Content */}
       <div className="relative z-10 text-center px-6 max-w-5xl mx-auto">
-        {/* Badge */}
-        <div
-          className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-gold-600/30 bg-gold-DEFAULT/5 mb-8 transition-all duration-1000 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
-        >
-          <span className="w-1.5 h-1.5 rounded-full bg-gold-400 animate-pulse" />
-          <span className="text-gold-400 text-xs tracking-[0.3em] uppercase">Est. Premium Gaming</span>
-        </div>
-
         {/* Main headline */}
         <h1
-          className={`text-5xl sm:text-6xl lg:text-8xl font-bold tracking-tight mb-4 transition-all duration-1000 delay-200 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}
+          className={`text-4xl sm:text-6xl lg:text-8xl font-bold tracking-tight mb-3 transition-all duration-1000 delay-200 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}
         >
           <span className="text-gold-shimmer block">Lucky Pearl</span>
         </h1>
+
+        <p
+          className={`text-gold-400/90 text-base sm:text-lg font-medium mb-6 sm:mb-8 transition-all duration-1000 delay-250 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
+        >
+          Premium gaming
+        </p>
 
         {/* Tagline */}
         <p
@@ -184,7 +182,7 @@ export default function Hero() {
         <div
           className={`mb-12 transition-all duration-1000 delay-500 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
         >
-          <p className="text-pearl-300/40 text-xs tracking-[0.4em] uppercase mb-2">Live Grand Jackpot</p>
+          <p className="text-pearl-300/60 text-sm sm:text-base font-medium mb-2">Live Grand Jackpot</p>
           <div
             className="text-4xl sm:text-5xl lg:text-6xl font-black jackpot-glow"
             style={{ color: '#f5d882' }}
@@ -236,9 +234,9 @@ export default function Hero() {
       {/* Bottom fade */}
       <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-navy-900 to-transparent pointer-events-none" />
 
-      {/* Scroll indicator */}
-      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 opacity-40">
-        <span className="text-pearl-300 text-[10px] tracking-[0.3em] uppercase" style={{ fontFamily: "'Cinzel', serif" }}>Scroll</span>
+      {/* Scroll indicator — hidden on mobile (bottom nav is enough) */}
+      <div className="hidden sm:flex absolute bottom-8 left-1/2 -translate-x-1/2 flex-col items-center gap-2 opacity-40">
+        <span className="text-pearl-300 text-sm">Scroll down</span>
         <div className="w-px h-8 bg-gradient-to-b from-gold-DEFAULT to-transparent animate-pulse" />
       </div>
     </section>

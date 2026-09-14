@@ -2,9 +2,10 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { gamePlayUrls } from '@/lib/gamePlayUrls';
 
 interface Game {
-  slug: string;
+  slug: keyof typeof gamePlayUrls;
   name: string;
   subtitle: string;
   tagline: string;
@@ -167,9 +168,9 @@ export default function GamesSection() {
             const isHovered = hoveredSlug === game.slug;
 
             return (
-              <Link href={`/games/${game.slug}`} key={game.slug}>
+              <div key={game.slug} className="relative rounded-2xl overflow-hidden group game-card-glow">
                 <div
-                  className="relative rounded-2xl overflow-hidden cursor-pointer group game-card-glow"
+                  className="relative h-full"
                   style={{
                     minHeight: 320,
                     boxShadow: isHovered
@@ -226,12 +227,14 @@ export default function GamesSection() {
 
                     {/* Game name */}
                     <div className="mb-3">
-                      <h3
-                        className="text-2xl font-bold text-white leading-tight"
-                        style={{ fontFamily: "'Cinzel', serif" }}
-                      >
-                        {game.name}
-                      </h3>
+                      <Link href={`/games/${game.slug}`} className="hover:text-gold-200 transition-colors">
+                        <h3
+                          className="text-2xl font-bold text-white leading-tight"
+                          style={{ fontFamily: "'Cinzel', serif" }}
+                        >
+                          {game.name}
+                        </h3>
+                      </Link>
                       <p className="text-sm opacity-60 tracking-[0.2em]">{game.subtitle}</p>
                       <p
                         className="text-xs mt-1 opacity-80 tracking-widest uppercase"
@@ -289,8 +292,11 @@ export default function GamesSection() {
                         </p>
                         <p className="text-white/30 text-[10px]">{game.players} playing now</p>
                       </div>
-                      <button
-                        className="px-6 py-3 rounded-lg text-xs font-bold tracking-[0.2em] uppercase transition-all duration-300 btn-press"
+                      <a
+                        href={gamePlayUrls[game.slug]}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-6 py-3 rounded-lg text-xs font-bold tracking-[0.2em] uppercase transition-all duration-300 btn-press inline-block"
                         style={{
                           background: isHovered
                             ? game.accentColor
@@ -301,11 +307,11 @@ export default function GamesSection() {
                         }}
                       >
                         Play Now
-                      </button>
+                      </a>
                     </div>
                   </div>
                 </div>
-              </Link>
+              </div>
             );
           })}
         </div>
