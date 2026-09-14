@@ -1,10 +1,11 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { Gem, Mail, Phone, CalendarDays, Inbox } from 'lucide-react';
+import { Gem, Mail, Phone, CalendarDays } from 'lucide-react';
 import { db, ensureSchema } from '@/lib/db';
 import { getSessionUser } from '@/lib/auth';
 import { gamePlayUrls } from '@/lib/gamePlayUrls';
 import LogoutButton from './LogoutButton';
+import InboxClient from './InboxClient';
 
 export const dynamic = 'force-dynamic';
 
@@ -24,20 +25,21 @@ export default async function DashboardPage() {
   await ensureSchema();
 
   const messagesResult = await db.execute({
-    sql: 'SELECT id, body, created_at, read_at FROM messages WHERE user_id = ? ORDER BY created_at DESC',
+    sql: 'SELECT id, body, sender_admin_id, created_at, read_at FROM messages WHERE user_id = ? ORDER BY created_at ASC',
     args: [user.id],
   });
   const messages = messagesResult.rows.map((row) => ({
     id: String(row.id),
     body: String(row.body),
+    senderAdminId: row.sender_admin_id ? String(row.sender_admin_id) : null,
     createdAt: String(row.created_at),
-    wasUnread: !row.read_at,
+    wasUnread: Boolean(row.sender_admin_id) && !row.read_at,
   }));
 
-  const unreadIds = messages.filter((message) => message.wasUnread).map((message) => message.id);
-  if (unreadIds.length > 0) {
+  const hasUnread = messages.some((message) => message.wasUnread);
+  if (hasUnread) {
     await db.execute({
-      sql: 'UPDATE messages SET read_at = datetime(\'now\') WHERE user_id = ? AND read_at IS NULL',
+      sql: "UPDATE messages SET read_at = datetime('now') WHERE user_id = ? AND sender_admin_id IS NOT NULL AND read_at IS NULL",
       args: [user.id],
     });
   }
@@ -163,39 +165,7 @@ export default async function DashboardPage() {
           </div>
         </div>
 
-        <div className="rounded-2xl border border-gold-600/25 bg-navy-800/60 p-6 mb-12">
-          <div className="flex items-center gap-2 mb-5">
-            <Inbox className="w-5 h-5 text-gold-400" />
-            <h2 className="text-lg font-bold text-white" style={{ fontFamily: "'Cinzel', serif" }}>
-              Inbox
-            </h2>
-            {unreadIds.length > 0 && (
-              <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-gold-500/20 text-gold-400">
-                {unreadIds.length} new
-              </span>
-            )}
-          </div>
-
-          {messages.length === 0 ? (
-            <p className="text-pearl-300/60 text-sm">No messages yet.</p>
-          ) : (
-            <div className="space-y-3">
-              {messages.map((message) => (
-                <div
-                  key={message.id}
-                  className={`rounded-xl border px-4 py-3.5 ${
-                    message.wasUnread ? 'border-gold-500/40 bg-gold-500/5' : 'border-white/10 bg-navy-900/60'
-                  }`}
-                >
-                  <p className="text-pearl-100 text-sm whitespace-pre-wrap">{message.body}</p>
-                  <p className="text-pearl-300/40 text-xs mt-1.5">
-                    {new Date(message.createdAt.replace(' ', 'T') + 'Z').toLocaleString('en-US')}
-                  </p>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+        <InboxClient initialMessages={messages} />
 
         <div className="rounded-2xl border border-gold-600/25 bg-navy-800/40 p-6 text-center">
           <p className="text-pearl-300/70 text-sm">

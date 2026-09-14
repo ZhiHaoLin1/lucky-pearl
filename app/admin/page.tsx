@@ -18,9 +18,17 @@ export default async function AdminPage() {
   }
 
   await ensureSchema();
-  const result = await db.execute(
-    "SELECT id, full_name, email, phone, preferred_game, created_at FROM users WHERE role != 'admin' ORDER BY created_at DESC"
-  );
+  const result = await db.execute(`
+    SELECT
+      u.id, u.full_name, u.email, u.phone, u.preferred_game, u.created_at,
+      (
+        SELECT COUNT(*) FROM messages m
+        WHERE m.user_id = u.id AND m.sender_admin_id IS NULL AND m.read_at IS NULL
+      ) AS unread_count
+    FROM users u
+    WHERE u.role != 'admin'
+    ORDER BY u.created_at DESC
+  `);
 
   const customers: AdminCustomer[] = result.rows.map((row) => ({
     id: String(row.id),
@@ -29,6 +37,7 @@ export default async function AdminPage() {
     phone: String(row.phone),
     preferredGame: row.preferred_game ? String(row.preferred_game) : null,
     createdAt: String(row.created_at),
+    unreadCount: Number(row.unread_count),
   }));
 
   return (
@@ -62,9 +71,6 @@ export default async function AdminPage() {
           >
             Customer accounts
           </h1>
-          <p className="text-pearl-300/60 text-base">
-            {customers.length} account{customers.length === 1 ? '' : 's'}. Select one to send a message.
-          </p>
         </div>
 
         <AdminDashboardClient customers={customers} />

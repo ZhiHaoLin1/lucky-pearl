@@ -16,8 +16,14 @@ export async function GET(request: Request) {
   }
 
   await ensureSchema();
+
+  await db.execute({
+    sql: "UPDATE messages SET read_at = datetime('now') WHERE user_id = ? AND sender_admin_id IS NULL AND read_at IS NULL",
+    args: [userId],
+  });
+
   const result = await db.execute({
-    sql: 'SELECT id, body, created_at, read_at FROM messages WHERE user_id = ? ORDER BY created_at ASC',
+    sql: 'SELECT id, body, sender_admin_id, created_at, read_at FROM messages WHERE user_id = ? ORDER BY created_at ASC',
     args: [userId],
   });
 
@@ -56,4 +62,22 @@ export async function POST(request: Request) {
   } catch {
     return NextResponse.json({ error: 'Unexpected error while sending the message.' }, { status: 500 });
   }
+}
+
+export async function DELETE(request: Request) {
+  const sessionUser = await getSessionUser();
+  if (!sessionUser || sessionUser.role !== 'admin') {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+  }
+
+  const { searchParams } = new URL(request.url);
+  const id = searchParams.get('id');
+  if (!id) {
+    return NextResponse.json({ error: 'Missing message id.' }, { status: 400 });
+  }
+
+  await ensureSchema();
+  await db.execute({ sql: 'DELETE FROM messages WHERE id = ?', args: [id] });
+
+  return NextResponse.json({ ok: true });
 }
