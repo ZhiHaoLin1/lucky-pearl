@@ -56,12 +56,15 @@ export default async function DashboardPage() {
   const financeSummary = await getFinanceSummary(user.id);
   const nextTier = getNextTier(financeSummary.tier);
   const withdrawalsResult = await db.execute({
-    sql: 'SELECT id, amount_cents, status, created_at FROM withdrawals WHERE user_id = ? ORDER BY created_at DESC',
+    sql: 'SELECT id, amount_cents, method, payout_detail, fee_cents, status, created_at FROM withdrawals WHERE user_id = ? ORDER BY created_at DESC',
     args: [user.id],
   });
   const initialWithdrawals = withdrawalsResult.rows.map((row) => ({
     id: String(row.id),
     amount_cents: Number(row.amount_cents),
+    method: row.method ? String(row.method) : null,
+    payout_detail: row.payout_detail ? String(row.payout_detail) : null,
+    fee_cents: Number(row.fee_cents ?? 0),
     status: String(row.status),
     created_at: String(row.created_at),
   }));

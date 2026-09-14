@@ -26,7 +26,7 @@ export async function GET(request: Request) {
       args: [userId],
     }),
     db.execute({
-      sql: 'SELECT id, amount_cents, status, created_at, processed_at FROM withdrawals WHERE user_id = ? ORDER BY created_at DESC',
+      sql: 'SELECT id, amount_cents, method, payout_detail, fee_cents, status, created_at, processed_at FROM withdrawals WHERE user_id = ? ORDER BY created_at DESC',
       args: [userId],
     }),
   ]);

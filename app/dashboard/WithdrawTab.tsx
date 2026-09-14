@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { ArrowDownToLine } from 'lucide-react';
+import { WITHDRAWAL_METHODS, type WithdrawalMethodKey } from '@/lib/withdrawalMethods';
 
 type Tier = {
   name: string;
@@ -18,6 +19,9 @@ type NextTier = {
 type WithdrawalRow = {
   id: string;
   amount_cents: number;
+  method: string | null;
+  payout_detail: string | null;
+  fee_cents: number;
   status: string;
   created_at: string;
 };
@@ -46,10 +50,11 @@ function formatSqliteDate(value: string) {
 
 const STATUS_STYLES: Record<string, string> = {
   pending: 'bg-gold-500/15 text-gold-400 border-gold-500/30',
-  approved: 'bg-blue-500/15 text-blue-300 border-blue-500/30',
-  paid: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30',
+  completed: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30',
   denied: 'bg-red-500/15 text-red-300 border-red-500/30',
 };
+
+const METHOD_KEYS = Object.keys(WITHDRAWAL_METHODS) as WithdrawalMethodKey[];
 
 export default function WithdrawTab({
   tier,
@@ -63,6 +68,8 @@ export default function WithdrawTab({
   const [used, setUsed] = useState(todaysWithdrawnCents);
   const [remaining, setRemaining] = useState(remainingTodayCents);
   const [amount, setAmount] = useState('');
+  const [method, setMethod] = useState<WithdrawalMethodKey>('zelle');
+  const [payoutDetail, setPayoutDetail] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
@@ -70,6 +77,11 @@ export default function WithdrawTab({
   const depositPct = nextTier
     ? Math.min(100, (lifetimeDepositsCents / nextTier.minDepositsCents) * 100)
     : 100;
+
+  const amountNumber = Number(amount);
+  const amountCentsPreview = Number.isFinite(amountNumber) && amountNumber > 0 ? Math.round(amountNumber * 100) : 0;
+  const feeCentsPreview = Math.round(amountCentsPreview * WITHDRAWAL_METHODS[method].feeRate);
+  const netCentsPreview = amountCentsPreview - feeCentsPreview;
 
   const refresh = async () => {
     try {
@@ -88,9 +100,12 @@ export default function WithdrawTab({
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setMessage(null);
-    const amountNumber = Number(amount);
     if (!Number.isFinite(amountNumber) || amountNumber <= 0) {
       setMessage('Enter a valid amount.');
+      return;
+    }
+    if (!payoutDetail.trim()) {
+      setMessage(`Enter your ${WITHDRAWAL_METHODS[method].detailLabel.toLowerCase()}.`);
       return;
     }
 
@@ -99,13 +114,14 @@ export default function WithdrawTab({
       const response = await fetch('/api/withdrawals', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ amountDollars: amountNumber }),
+        body: JSON.stringify({ amountDollars: amountNumber, method, payoutDetail: payoutDetail.trim() }),
       });
       const data = await response.json();
       if (!response.ok) {
         throw new Error(data?.error || 'Could not submit your withdrawal request.');
       }
       setAmount('');
+      setPayoutDetail('');
       setMessage('Withdrawal request submitted — our team will review it.');
       await refresh();
     } catch (err) {
@@ -178,27 +194,75 @@ export default function WithdrawTab({
           </h2>
         </div>
 
-        <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-3 mb-3">
-          <div className="relative flex-1">
-            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-pearl-300/60">$</span>
-            <input
-              type="number"
-              step="0.01"
-              min="0.01"
-              value={amount}
-              onChange={(event) => setAmount(event.target.value)}
-              placeholder="0.00"
-              required
-              className="w-full rounded-xl bg-navy-900 border border-gold-600/25 pl-8 pr-4 py-3.5 text-base text-pearl-100 focus:border-gold-400 focus:outline-none focus:ring-2 focus:ring-gold-400/30"
-            />
+        <form onSubmit={handleSubmit} className="space-y-4 mb-3">
+          <div className="grid grid-cols-2 gap-3">
+            {METHOD_KEYS.map((key) => {
+              const info = WITHDRAWAL_METHODS[key];
+              const selected = method === key;
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setMethod(key)}
+                  className={`rounded-xl border px-4 py-3 text-left transition-colors ${
+                    selected
+                      ? 'border-gold-400 bg-gold-500/10'
+                      : 'border-white/10 bg-navy-900/60 hover:border-white/20'
+                  }`}
+                >
+                  <p className="text-pearl-100 font-semibold text-sm">{info.label}</p>
+                  <p className={`text-xs mt-0.5 ${info.feeRate > 0 ? 'text-gold-400' : 'text-emerald-400'}`}>
+                    {info.feeDescription}
+                  </p>
+                </button>
+              );
+            })}
           </div>
-          <button
-            type="submit"
-            disabled={isSubmitting || remaining <= 0}
-            className="shrink-0 px-6 py-3.5 rounded-xl bg-gold-gradient text-navy-900 font-bold disabled:opacity-60"
-          >
-            {isSubmitting ? 'Submitting…' : 'Request Withdrawal'}
-          </button>
+
+          <label className="block">
+            <span className="text-pearl-200 text-sm font-medium mb-1.5 block">
+              {WITHDRAWAL_METHODS[method].detailLabel}
+            </span>
+            <input
+              type="text"
+              value={payoutDetail}
+              onChange={(event) => setPayoutDetail(event.target.value)}
+              placeholder={WITHDRAWAL_METHODS[method].detailPlaceholder}
+              required
+              className="w-full rounded-xl bg-navy-900 border border-gold-600/25 px-4 py-3 text-base text-pearl-100 focus:border-gold-400 focus:outline-none focus:ring-2 focus:ring-gold-400/30"
+            />
+          </label>
+
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="relative flex-1">
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-pearl-300/60">$</span>
+              <input
+                type="number"
+                step="0.01"
+                min="0.01"
+                value={amount}
+                onChange={(event) => setAmount(event.target.value)}
+                placeholder="0.00"
+                required
+                className="w-full rounded-xl bg-navy-900 border border-gold-600/25 pl-8 pr-4 py-3.5 text-base text-pearl-100 focus:border-gold-400 focus:outline-none focus:ring-2 focus:ring-gold-400/30"
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={isSubmitting || remaining <= 0}
+              className="shrink-0 px-6 py-3.5 rounded-xl bg-gold-gradient text-navy-900 font-bold disabled:opacity-60"
+            >
+              {isSubmitting ? 'Submitting…' : 'Request Withdrawal'}
+            </button>
+          </div>
+
+          {amountCentsPreview > 0 && (
+            <p className="text-pearl-300/60 text-xs">
+              {feeCentsPreview > 0
+                ? `${WITHDRAWAL_METHODS[method].label} fee: ${formatCents(feeCentsPreview)} · You'll receive ${formatCents(netCentsPreview)}`
+                : `No fee · You'll receive ${formatCents(netCentsPreview)}`}
+            </p>
+          )}
         </form>
         {message && <p className="text-sm text-pearl-100 mb-3">{message}</p>}
 
@@ -206,24 +270,33 @@ export default function WithdrawTab({
           <p className="text-pearl-300/60 text-sm">No withdrawal requests yet.</p>
         ) : (
           <div className="space-y-2.5">
-            {withdrawals.map((withdrawal) => (
-              <div
-                key={withdrawal.id}
-                className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-navy-900/60 px-4 py-3"
-              >
-                <div>
-                  <p className="text-pearl-100 font-semibold text-sm">{formatCents(withdrawal.amount_cents)}</p>
-                  <p className="text-pearl-300/40 text-xs">{formatSqliteDate(withdrawal.created_at)}</p>
-                </div>
-                <span
-                  className={`px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wide border ${
-                    STATUS_STYLES[withdrawal.status] ?? STATUS_STYLES.pending
-                  }`}
+            {withdrawals.map((withdrawal) => {
+              const methodLabel =
+                withdrawal.method === 'cashapp' ? 'Cash App' : withdrawal.method === 'zelle' ? 'Zelle' : null;
+              return (
+                <div
+                  key={withdrawal.id}
+                  className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-navy-900/60 px-4 py-3"
                 >
-                  {withdrawal.status}
-                </span>
-              </div>
-            ))}
+                  <div className="min-w-0">
+                    <p className="text-pearl-100 font-semibold text-sm">{formatCents(withdrawal.amount_cents)}</p>
+                    {methodLabel && (
+                      <p className="text-pearl-300/60 text-xs truncate">
+                        {methodLabel} → {withdrawal.payout_detail}
+                      </p>
+                    )}
+                    <p className="text-pearl-300/40 text-xs">{formatSqliteDate(withdrawal.created_at)}</p>
+                  </div>
+                  <span
+                    className={`shrink-0 px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wide border ${
+                      STATUS_STYLES[withdrawal.status] ?? STATUS_STYLES.pending
+                    }`}
+                  >
+                    {withdrawal.status}
+                  </span>
+                </div>
+              );
+            })}
           </div>
         )}
       </div>

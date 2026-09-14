@@ -67,6 +67,9 @@ export function ensureSchema() {
             id TEXT PRIMARY KEY,
             user_id TEXT NOT NULL,
             amount_cents INTEGER NOT NULL,
+            method TEXT,
+            payout_detail TEXT,
+            fee_cents INTEGER NOT NULL DEFAULT 0,
             status TEXT NOT NULL DEFAULT 'pending',
             created_at TEXT NOT NULL DEFAULT (datetime('now')),
             processed_at TEXT,
@@ -74,6 +77,19 @@ export function ensureSchema() {
           )`
         ),
       ]);
+
+      // Migration for databases created before the payout columns existed.
+      const withdrawalColumns = await db.execute('PRAGMA table_info(withdrawals)');
+      const withdrawalColumnNames = new Set(withdrawalColumns.rows.map((row) => String(row.name)));
+      if (!withdrawalColumnNames.has('method')) {
+        await db.execute('ALTER TABLE withdrawals ADD COLUMN method TEXT');
+      }
+      if (!withdrawalColumnNames.has('payout_detail')) {
+        await db.execute('ALTER TABLE withdrawals ADD COLUMN payout_detail TEXT');
+      }
+      if (!withdrawalColumnNames.has('fee_cents')) {
+        await db.execute('ALTER TABLE withdrawals ADD COLUMN fee_cents INTEGER NOT NULL DEFAULT 0');
+      }
     })();
   }
   return schemaReady;

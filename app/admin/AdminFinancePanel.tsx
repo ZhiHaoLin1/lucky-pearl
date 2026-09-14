@@ -6,7 +6,16 @@ import { DollarSign, Plus } from 'lucide-react';
 type Tier = { name: string; icon: string; color: string; dailyLimitCents: number };
 type NextTier = { name: string; minDepositsCents: number } | null;
 type DepositRow = { id: string; amount_cents: number; method: string | null; note: string | null; created_at: string };
-type WithdrawalRow = { id: string; amount_cents: number; status: string; created_at: string; processed_at: string | null };
+type WithdrawalRow = {
+  id: string;
+  amount_cents: number;
+  method: string | null;
+  payout_detail: string | null;
+  fee_cents: number;
+  status: string;
+  created_at: string;
+  processed_at: string | null;
+};
 
 type FinanceData = {
   tier: Tier;
@@ -33,8 +42,7 @@ function formatSqliteDate(value: string) {
 
 const STATUS_STYLES: Record<string, string> = {
   pending: 'bg-gold-500/15 text-gold-400 border-gold-500/30',
-  approved: 'bg-blue-500/15 text-blue-300 border-blue-500/30',
-  paid: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30',
+  completed: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30',
   denied: 'bg-red-500/15 text-red-300 border-red-500/30',
 };
 
@@ -184,53 +192,55 @@ export default function AdminFinancePanel({ customerId }: { customerId: string }
           <p className="text-pearl-300/50 text-sm">No withdrawal requests yet.</p>
         ) : (
           <div className="space-y-2">
-            {data.withdrawals.map((withdrawal) => (
-              <div
-                key={withdrawal.id}
-                className="flex items-center justify-between gap-2 rounded-lg border border-white/10 bg-navy-900/60 px-3 py-2.5"
-              >
-                <div>
-                  <p className="text-pearl-100 text-sm font-semibold">{formatCents(withdrawal.amount_cents)}</p>
-                  <p className="text-pearl-300/40 text-xs">{formatSqliteDate(withdrawal.created_at)}</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span
-                    className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide border ${
-                      STATUS_STYLES[withdrawal.status] ?? STATUS_STYLES.pending
-                    }`}
-                  >
-                    {withdrawal.status}
-                  </span>
-                  {withdrawal.status === 'pending' && (
-                    <>
-                      <button
-                        type="button"
-                        onClick={() => updateWithdrawalStatus(withdrawal.id, 'approved')}
-                        className="px-2 py-1 rounded text-[11px] font-bold bg-blue-500/15 text-blue-300 border border-blue-500/30 hover:bg-blue-500/25"
-                      >
-                        Approve
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => updateWithdrawalStatus(withdrawal.id, 'denied')}
-                        className="px-2 py-1 rounded text-[11px] font-bold bg-red-500/15 text-red-300 border border-red-500/30 hover:bg-red-500/25"
-                      >
-                        Deny
-                      </button>
-                    </>
-                  )}
-                  {withdrawal.status === 'approved' && (
-                    <button
-                      type="button"
-                      onClick={() => updateWithdrawalStatus(withdrawal.id, 'paid')}
-                      className="px-2 py-1 rounded text-[11px] font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-500/25"
+            {data.withdrawals.map((withdrawal) => {
+              const methodLabel =
+                withdrawal.method === 'cashapp' ? 'Cash App' : withdrawal.method === 'zelle' ? 'Zelle' : null;
+              const netCents = withdrawal.amount_cents - withdrawal.fee_cents;
+              return (
+                <div
+                  key={withdrawal.id}
+                  className="flex items-center justify-between gap-2 rounded-lg border border-white/10 bg-navy-900/60 px-3 py-2.5"
+                >
+                  <div className="min-w-0">
+                    <p className="text-pearl-100 text-sm font-semibold">{formatCents(withdrawal.amount_cents)}</p>
+                    {methodLabel && (
+                      <p className="text-pearl-300/70 text-xs truncate">
+                        {methodLabel} → {withdrawal.payout_detail}
+                        {withdrawal.fee_cents > 0 ? ` (net ${formatCents(netCents)})` : ''}
+                      </p>
+                    )}
+                    <p className="text-pearl-300/40 text-xs">{formatSqliteDate(withdrawal.created_at)}</p>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span
+                      className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide border ${
+                        STATUS_STYLES[withdrawal.status] ?? STATUS_STYLES.pending
+                      }`}
                     >
-                      Mark Paid
-                    </button>
-                  )}
+                      {withdrawal.status}
+                    </span>
+                    {withdrawal.status === 'pending' && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => updateWithdrawalStatus(withdrawal.id, 'completed')}
+                          className="px-2 py-1 rounded text-[11px] font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-500/25"
+                        >
+                          Mark Completed
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => updateWithdrawalStatus(withdrawal.id, 'denied')}
+                          className="px-2 py-1 rounded text-[11px] font-bold bg-red-500/15 text-red-300 border border-red-500/30 hover:bg-red-500/25"
+                        >
+                          Deny
+                        </button>
+                      </>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

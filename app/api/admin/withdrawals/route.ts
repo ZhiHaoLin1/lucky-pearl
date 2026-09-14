@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { db, ensureSchema } from '@/lib/db';
 import { getSessionUser } from '@/lib/auth';
 
-const ALLOWED_STATUSES = ['pending', 'approved', 'denied', 'paid'];
+const ALLOWED_STATUSES = ['pending', 'completed', 'denied'];
 
 export async function PATCH(request: Request) {
   const sessionUser = await getSessionUser();

@@ -4,6 +4,7 @@ import { db, ensureSchema } from '@/lib/db';
 import { getSessionUser } from '@/lib/auth';
 import { getFinanceSummary } from '@/lib/finance';
 import { getNextTier, formatCents } from '@/lib/vip';
+import { WITHDRAWAL_METHODS, isWithdrawalMethod, computeFeeCents } from '@/lib/withdrawalMethods';
 
 export async function GET() {
   const sessionUser = await getSessionUser();
@@ -21,7 +22,7 @@ export async function GET() {
       args: [sessionUser.id],
     }),
     db.execute({
-      sql: 'SELECT id, amount_cents, status, created_at, processed_at FROM withdrawals WHERE user_id = ? ORDER BY created_at DESC',
+      sql: 'SELECT id, amount_cents, method, payout_detail, fee_cents, status, created_at, processed_at FROM withdrawals WHERE user_id = ? ORDER BY created_at DESC',
       args: [sessionUser.id],
     }),
   ]);
@@ -46,9 +47,22 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
     const amountDollars = Number(body.amountDollars);
+    const method = body.method;
+    const payoutDetail = String(body.payoutDetail ?? '').trim();
+
     if (!Number.isFinite(amountDollars) || amountDollars <= 0) {
       return NextResponse.json({ error: 'Enter a valid amount.' }, { status: 400 });
     }
+    if (!isWithdrawalMethod(method)) {
+      return NextResponse.json({ error: 'Choose Zelle or Cash App.' }, { status: 400 });
+    }
+    if (!payoutDetail) {
+      return NextResponse.json(
+        { error: `Enter your ${WITHDRAWAL_METHODS[method].detailLabel.toLowerCase()}.` },
+        { status: 400 }
+      );
+    }
+
     const amountCents = Math.round(amountDollars * 100);
 
     await ensureSchema();
@@ -65,24 +79,33 @@ export async function POST(request: Request) {
       );
     }
 
+    const feeCents = computeFeeCents(amountCents, method);
+    const netCents = amountCents - feeCents;
+
     const id = randomUUID();
     await db.execute({
-      sql: 'INSERT INTO withdrawals (id, user_id, amount_cents) VALUES (?, ?, ?)',
-      args: [id, sessionUser.id, amountCents],
+      sql: 'INSERT INTO withdrawals (id, user_id, amount_cents, method, payout_detail, fee_cents) VALUES (?, ?, ?, ?, ?, ?)',
+      args: [id, sessionUser.id, amountCents, method, payoutDetail, feeCents],
     });
 
-    const webhookUrl = process.env.DISCORD_WEBHOOK_URL;
+    const webhookUrl = process.env.DISCORD_WITHDRAWAL_WEBHOOK_URL || process.env.DISCORD_WEBHOOK_URL;
     if (webhookUrl) {
+      const methodLabel = WITHDRAWAL_METHODS[method].label;
+      const feeLine = feeCents > 0 ? `Fee: ${formatCents(feeCents)} · Net payout: ${formatCents(netCents)}` : 'Fee: none';
       fetch(webhookUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           content: [
-            'New Lucky Pearl withdrawal request',
+            '💸 New Lucky Pearl withdrawal request',
             `Name: ${sessionUser.fullName}`,
             `Email: ${sessionUser.email}`,
             `Amount: ${formatCents(amountCents)}`,
+            `Method: ${methodLabel} → ${payoutDetail}`,
+            feeLine,
             `Tier: ${summary.tier.name}`,
+            '',
+            'Mark it Completed or Denied: https://www.luckypearl.app/admin',
           ].join('\n'),
         }),
       }).catch(() => {});

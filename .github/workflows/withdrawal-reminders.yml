@@ -1,0 +1,15 @@
+name: Withdrawal Reminders
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger pending-withdrawal reminder check
+        run: |
+          curl -sf -X GET "https://www.luckypearl.app/api/cron/withdrawal-reminders" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}"
