@@ -25,6 +25,7 @@ export default function AgeVerification() {
   const handleVerify = () => {
     localStorage.setItem('lp_age_verified', '1');
     setVisible(false);
+    window.dispatchEvent(new Event('lp-age-verified'));
   };
 
   const handleDecline = () => {
