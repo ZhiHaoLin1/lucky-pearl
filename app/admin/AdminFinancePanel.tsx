@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { DollarSign, Plus } from 'lucide-react';
+import { methodLabel } from '@/lib/withdrawalMethods';
 
 type Tier = { name: string; icon: string; color: string; dailyLimitCents: number };
 type NextTier = { name: string; minDepositsCents: number } | null;
@@ -193,8 +194,6 @@ export default function AdminFinancePanel({ customerId }: { customerId: string }
         ) : (
           <div className="space-y-2">
             {data.withdrawals.map((withdrawal) => {
-              const methodLabel =
-                withdrawal.method === 'cashapp' ? 'Cash App' : withdrawal.method === 'zelle' ? 'Zelle' : null;
               const netCents = withdrawal.amount_cents - withdrawal.fee_cents;
               return (
                 <div
@@ -203,9 +202,9 @@ export default function AdminFinancePanel({ customerId }: { customerId: string }
                 >
                   <div className="min-w-0">
                     <p className="text-pearl-100 text-sm font-semibold">{formatCents(withdrawal.amount_cents)}</p>
-                    {methodLabel && (
+                    {withdrawal.method && (
                       <p className="text-pearl-300/70 text-xs truncate">
-                        {methodLabel} → {withdrawal.payout_detail}
+                        {methodLabel(withdrawal.method)} → {withdrawal.payout_detail}
                         {withdrawal.fee_cents > 0 ? ` (net ${formatCents(netCents)})` : ''}
                       </p>
                     )}

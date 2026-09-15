@@ -2,16 +2,13 @@ import { NextResponse } from 'next/server';
 import { verifyKey, InteractionType, InteractionResponseType } from 'discord-interactions';
 import { db, ensureSchema } from '@/lib/db';
 import { formatCents } from '@/lib/vip';
+import { methodLabel } from '@/lib/withdrawalMethods';
 
 type DiscordOption = { name: string; value: string; focused?: boolean };
 type DiscordInteraction = {
   type: number;
   data?: { name?: string; options?: DiscordOption[] };
 };
-
-function methodLabelFor(method: unknown): string {
-  return method === 'cashapp' ? 'Cash App' : method === 'zelle' ? 'Zelle' : String(method ?? 'unknown');
-}
 
 export async function POST(request: Request) {
   const publicKey = process.env.DISCORD_PUBLIC_KEY;
@@ -51,7 +48,7 @@ export async function POST(request: Request) {
 
     const choices = result.rows
       .map((row) => {
-        const name = `${row.full_name} — ${formatCents(Number(row.amount_cents))} via ${methodLabelFor(row.method)}`;
+        const name = `${row.full_name} — ${formatCents(Number(row.amount_cents))} via ${methodLabel(row.method)}`;
         return { name: name.slice(0, 100), value: String(row.id) };
       })
       .filter((choice) => choice.name.toLowerCase().includes(query))
@@ -100,7 +97,7 @@ export async function POST(request: Request) {
     return NextResponse.json({
       type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
       data: {
-        content: `✅ Marked **${formatCents(Number(row.amount_cents))}** to **${row.full_name}** (${methodLabelFor(
+        content: `✅ Marked **${formatCents(Number(row.amount_cents))}** to **${row.full_name}** (${methodLabel(
           row.method
         )} → ${row.payout_detail}) as completed.`,
       },

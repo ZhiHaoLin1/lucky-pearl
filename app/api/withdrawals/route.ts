@@ -54,11 +54,18 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Enter a valid amount.' }, { status: 400 });
     }
     if (!isWithdrawalMethod(method)) {
-      return NextResponse.json({ error: 'Choose Zelle or Cash App.' }, { status: 400 });
+      return NextResponse.json({ error: 'Choose Zelle, Cash App, or Chime.' }, { status: 400 });
     }
+    const methodInfo = WITHDRAWAL_METHODS[method];
     if (!payoutDetail) {
       return NextResponse.json(
-        { error: `Enter your ${WITHDRAWAL_METHODS[method].detailLabel.toLowerCase()}.` },
+        { error: `Enter your ${methodInfo.detailLabel.toLowerCase()}.` },
+        { status: 400 }
+      );
+    }
+    if (methodInfo.detailPrefix && !payoutDetail.startsWith(methodInfo.detailPrefix)) {
+      return NextResponse.json(
+        { error: `Your ${methodInfo.detailLabel.toLowerCase()} must start with "${methodInfo.detailPrefix}".` },
         { status: 400 }
       );
     }
@@ -90,7 +97,6 @@ export async function POST(request: Request) {
 
     const webhookUrl = process.env.DISCORD_WITHDRAWAL_WEBHOOK_URL || process.env.DISCORD_WEBHOOK_URL;
     if (webhookUrl) {
-      const methodLabel = WITHDRAWAL_METHODS[method].label;
       const feeLine = feeCents > 0 ? `Fee: ${formatCents(feeCents)} · Net payout: ${formatCents(netCents)}` : 'Fee: none';
       fetch(webhookUrl, {
         method: 'POST',
@@ -101,7 +107,7 @@ export async function POST(request: Request) {
             `Name: ${sessionUser.fullName}`,
             `Email: ${sessionUser.email}`,
             `Amount: ${formatCents(amountCents)}`,
-            `Method: ${methodLabel} → ${payoutDetail}`,
+            `Method: ${methodInfo.label} → ${payoutDetail}`,
             feeLine,
             `Tier: ${summary.tier.name}`,
             '',

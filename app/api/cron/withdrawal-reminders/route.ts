@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { db, ensureSchema } from '@/lib/db';
 import { formatCents } from '@/lib/vip';
+import { methodLabel } from '@/lib/withdrawalMethods';
 
 export const dynamic = 'force-dynamic';
 
@@ -33,11 +34,10 @@ export async function GET(request: Request) {
       const amountCents = Number(row.amount_cents);
       const feeCents = Number(row.fee_cents ?? 0);
       const netCents = amountCents - feeCents;
-      const methodLabel = row.method === 'cashapp' ? 'Cash App' : row.method === 'zelle' ? 'Zelle' : String(row.method ?? 'unknown');
       const feeNote = feeCents > 0 ? `, net ${formatCents(netCents)} after fee` : '';
       const createdAtMs = new Date(String(row.created_at).replace(' ', 'T') + 'Z').getTime();
       const minutesAgo = Math.max(0, Math.round((now - createdAtMs) / 60000));
-      return `${index + 1}. ${row.full_name} — ${formatCents(amountCents)} via ${methodLabel} to ${row.payout_detail}${feeNote} (pending ${minutesAgo} min)`;
+      return `${index + 1}. ${row.full_name} — ${formatCents(amountCents)} via ${methodLabel(row.method)} to ${row.payout_detail}${feeNote} (pending ${minutesAgo} min)`;
     });
 
     await fetch(webhookUrl, {

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { ArrowDownToLine } from 'lucide-react';
-import { WITHDRAWAL_METHODS, type WithdrawalMethodKey } from '@/lib/withdrawalMethods';
+import { WITHDRAWAL_METHODS, methodLabel, type WithdrawalMethodKey } from '@/lib/withdrawalMethods';
 
 type Tier = {
   name: string;
@@ -104,8 +104,14 @@ export default function WithdrawTab({
       setMessage('Enter a valid amount.');
       return;
     }
-    if (!payoutDetail.trim()) {
-      setMessage(`Enter your ${WITHDRAWAL_METHODS[method].detailLabel.toLowerCase()}.`);
+    const trimmedDetail = payoutDetail.trim();
+    const methodInfo = WITHDRAWAL_METHODS[method];
+    if (!trimmedDetail) {
+      setMessage(`Enter your ${methodInfo.detailLabel.toLowerCase()}.`);
+      return;
+    }
+    if (methodInfo.detailPrefix && !trimmedDetail.startsWith(methodInfo.detailPrefix)) {
+      setMessage(`Your ${methodInfo.detailLabel.toLowerCase()} must start with "${methodInfo.detailPrefix}".`);
       return;
     }
 
@@ -114,7 +120,7 @@ export default function WithdrawTab({
       const response = await fetch('/api/withdrawals', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ amountDollars: amountNumber, method, payoutDetail: payoutDetail.trim() }),
+        body: JSON.stringify({ amountDollars: amountNumber, method, payoutDetail: trimmedDetail }),
       });
       const data = await response.json();
       if (!response.ok) {
@@ -195,7 +201,7 @@ export default function WithdrawTab({
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4 mb-3">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {METHOD_KEYS.map((key) => {
               const info = WITHDRAWAL_METHODS[key];
               const selected = method === key;
@@ -271,8 +277,6 @@ export default function WithdrawTab({
         ) : (
           <div className="space-y-2.5">
             {withdrawals.map((withdrawal) => {
-              const methodLabel =
-                withdrawal.method === 'cashapp' ? 'Cash App' : withdrawal.method === 'zelle' ? 'Zelle' : null;
               return (
                 <div
                   key={withdrawal.id}
@@ -280,9 +284,9 @@ export default function WithdrawTab({
                 >
                   <div className="min-w-0">
                     <p className="text-pearl-100 font-semibold text-sm">{formatCents(withdrawal.amount_cents)}</p>
-                    {methodLabel && (
+                    {withdrawal.method && (
                       <p className="text-pearl-300/60 text-xs truncate">
-                        {methodLabel} → {withdrawal.payout_detail}
+                        {methodLabel(withdrawal.method)} → {withdrawal.payout_detail}
                       </p>
                     )}
                     <p className="text-pearl-300/40 text-xs">{formatSqliteDate(withdrawal.created_at)}</p>
