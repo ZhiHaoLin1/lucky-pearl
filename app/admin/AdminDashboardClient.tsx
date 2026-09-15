@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Mail, Phone, Send, Trash2 } from 'lucide-react';
+import { Mail, Megaphone, Phone, Send, Trash2, Users } from 'lucide-react';
 import AdminFinancePanel from './AdminFinancePanel';
 
 export type AdminCustomer = {
@@ -37,6 +37,10 @@ export default function AdminDashboardClient({ customers: initialCustomers }: { 
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [detailTab, setDetailTab] = useState<'messages' | 'finance'>('messages');
+  const [view, setView] = useState<'customers' | 'broadcast'>('customers');
+  const [broadcastBody, setBroadcastBody] = useState('');
+  const [isBroadcasting, setIsBroadcasting] = useState(false);
+  const [broadcastMessage, setBroadcastMessage] = useState<string | null>(null);
 
   const activeCustomer = customers.find((customer) => customer.id === activeId) ?? null;
 
@@ -159,6 +163,44 @@ export default function AdminDashboardClient({ customers: initialCustomers }: { 
     }
   };
 
+  const selectAll = () => setCheckedIds(new Set(customers.map((customer) => customer.id)));
+  const clearSelection = () => setCheckedIds(new Set());
+
+  const sendBroadcast = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const recipientIds = Array.from(checkedIds);
+    if (recipientIds.length === 0) {
+      setBroadcastMessage('Select at least one customer first.');
+      return;
+    }
+    if (!broadcastBody.trim()) return;
+
+    const label = recipientIds.length === 1 ? '1 customer' : `${recipientIds.length} customers`;
+    if (!window.confirm(`Send this message to ${label}?`)) {
+      return;
+    }
+
+    setBroadcastMessage(null);
+    setIsBroadcasting(true);
+    try {
+      const response = await fetch('/api/admin/messages/bulk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userIds: recipientIds, body: broadcastBody.trim() }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data?.error || 'Could not send the broadcast.');
+      }
+      setBroadcastBody('');
+      setBroadcastMessage(`Sent to ${data.sent} customer${data.sent === 1 ? '' : 's'}.`);
+    } catch (err) {
+      setBroadcastMessage(err instanceof Error ? err.message : 'Could not send the broadcast.');
+    } finally {
+      setIsBroadcasting(false);
+    }
+  };
+
   if (customers.length === 0) {
     return (
       <div className="rounded-2xl border border-gold-600/25 bg-navy-800/60 p-8 text-center text-pearl-300/70">
@@ -169,12 +211,42 @@ export default function AdminDashboardClient({ customers: initialCustomers }: { 
 
   return (
     <div>
-      <p className="text-pearl-300/60 text-base mb-6">
-        {customers.length} account{customers.length === 1 ? '' : 's'}. Click one to message them, or check boxes
-        to select several for bulk actions.
-      </p>
+      <div className="flex gap-2 mb-5 border-b border-white/10">
+        {(['customers', 'broadcast'] as const).map((key) => (
+          <button
+            key={key}
+            type="button"
+            onClick={() => setView(key)}
+            className={`flex items-center gap-2 px-4 py-2.5 text-sm font-semibold border-b-2 -mb-px transition-colors ${
+              view === key
+                ? 'border-gold-400 text-gold-400'
+                : 'border-transparent text-pearl-300/60 hover:text-pearl-100'
+            }`}
+          >
+            {key === 'customers' ? <Users className="w-4 h-4" /> : <Megaphone className="w-4 h-4" />}
+            {key === 'customers' ? 'Customers' : 'Mass Message'}
+          </button>
+        ))}
+      </div>
 
-      {checkedIds.size > 0 && (
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+        <p className="text-pearl-300/60 text-base">
+          {customers.length} account{customers.length === 1 ? '' : 's'}. Click one to message them, or check boxes
+          to select several for bulk actions.
+        </p>
+        <div className="flex items-center gap-3 text-sm">
+          <button type="button" onClick={selectAll} className="text-gold-400 hover:text-gold-300">
+            Select all
+          </button>
+          {checkedIds.size > 0 && (
+            <button type="button" onClick={clearSelection} className="text-pearl-300/60 hover:text-pearl-100">
+              Clear selection
+            </button>
+          )}
+        </div>
+      </div>
+
+      {view === 'customers' && checkedIds.size > 0 && (
         <div className="mb-4 flex items-center justify-between gap-3 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3">
           <span className="text-sm text-pearl-100">{checkedIds.size} selected</span>
           <button
@@ -191,6 +263,43 @@ export default function AdminDashboardClient({ customers: initialCustomers }: { 
 
       {error && <p className="mb-4 text-sm text-red-300">{error}</p>}
 
+      {view === 'broadcast' ? (
+        <div className="rounded-2xl border border-gold-600/25 bg-navy-800/60 p-6">
+          <div className="flex items-center gap-2 mb-2">
+            <Megaphone className="w-5 h-5 text-gold-400" />
+            <h2 className="text-lg font-bold text-white" style={{ fontFamily: "'Cinzel', serif" }}>
+              Mass Message
+            </h2>
+          </div>
+          <p className="text-pearl-300/60 text-sm mb-5">
+            {checkedIds.size === 0
+              ? 'No customers selected. Check boxes in the Customers tab, or use "Select all" above.'
+              : `Sending to ${checkedIds.size} customer${checkedIds.size === 1 ? '' : 's'}.`}
+          </p>
+
+          <form onSubmit={sendBroadcast} className="space-y-3">
+            <textarea
+              value={broadcastBody}
+              onChange={(event) => setBroadcastBody(event.target.value)}
+              placeholder="Write a message to send to everyone selected…"
+              rows={5}
+              required
+              className="w-full rounded-xl bg-navy-900 border border-gold-600/25 px-4 py-3 text-sm text-pearl-100 focus:border-gold-400 focus:outline-none focus:ring-2 focus:ring-gold-400/30 resize-none"
+            />
+            <button
+              type="submit"
+              disabled={isBroadcasting || checkedIds.size === 0}
+              className="px-6 py-3 rounded-xl bg-gold-gradient text-navy-900 font-bold flex items-center gap-2 disabled:opacity-60"
+            >
+              <Send className="w-4 h-4" />
+              {isBroadcasting
+                ? 'Sending…'
+                : `Send to ${checkedIds.size} customer${checkedIds.size === 1 ? '' : 's'}`}
+            </button>
+          </form>
+          {broadcastMessage && <p className="mt-3 text-sm text-pearl-100">{broadcastMessage}</p>}
+        </div>
+      ) : (
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-1 rounded-2xl border border-gold-600/25 bg-navy-800/60 overflow-hidden">
           <div className="max-h-[560px] overflow-y-auto divide-y divide-white/5">
@@ -348,6 +457,7 @@ export default function AdminDashboardClient({ customers: initialCustomers }: { 
           )}
         </div>
       </div>
+      )}
     </div>
   );
 }
