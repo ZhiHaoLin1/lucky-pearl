@@ -1,9 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Menu, X, Gem, Gamepad2, Wallet, Headphones } from 'lucide-react';
+import Turnstile, { type TurnstileHandle } from './Turnstile';
+
+const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? '';
 
 const navLinks = [
   { label: 'Games', href: '#games' },
@@ -39,6 +42,8 @@ export default function Navbar() {
     password: '',
     confirmPassword: '',
   });
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const turnstileRef = useRef<TurnstileHandle>(null);
 
   const [loginOpen, setLoginOpen] = useState(false);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
@@ -77,6 +82,7 @@ export default function Navbar() {
   useEffect(() => {
     const onOpenJoin = () => {
       setSubmitMessage(null);
+      setTurnstileToken(null);
       setLoginOpen(false);
       setForgotOpen(false);
       setJoinOpen(true);
@@ -115,13 +121,17 @@ export default function Navbar() {
       setSubmitMessage('Password must be at least 8 characters.');
       return;
     }
+    if (!turnstileToken) {
+      setSubmitMessage('Please complete the verification challenge.');
+      return;
+    }
 
     setIsSubmitting(true);
     try {
       const response = await fetch('/api/auth/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({ ...formData, turnstileToken }),
       });
 
       const data = await response.json();
@@ -143,6 +153,8 @@ export default function Navbar() {
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Could not create your account.';
       setSubmitMessage(message);
+      setTurnstileToken(null);
+      turnstileRef.current?.reset();
     } finally {
       setIsSubmitting(false);
     }
@@ -180,6 +192,7 @@ export default function Navbar() {
 
   const showJoinForm = () => {
     setSubmitMessage(null);
+    setTurnstileToken(null);
     setLoginOpen(false);
     setForgotOpen(false);
     setJoinOpen(true);
@@ -429,9 +442,20 @@ export default function Navbar() {
                   />
                 </label>
 
+                {TURNSTILE_SITE_KEY && (
+                  <div className="flex justify-center">
+                    <Turnstile
+                      ref={turnstileRef}
+                      siteKey={TURNSTILE_SITE_KEY}
+                      onVerify={setTurnstileToken}
+                      onExpire={() => setTurnstileToken(null)}
+                    />
+                  </div>
+                )}
+
                 <button
                   type="submit"
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || (Boolean(TURNSTILE_SITE_KEY) && !turnstileToken)}
                   className="w-full min-h-[52px] py-3.5 text-lg font-bold text-navy-900 bg-gold-gradient rounded-xl disabled:opacity-60"
                 >
                   {isSubmitting ? 'Creating account…' : 'Create account'}

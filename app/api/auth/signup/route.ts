@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import { NextResponse } from 'next/server';
 import { db, ensureSchema } from '@/lib/db';
 import { attachSessionCookie } from '@/lib/auth';
+import { verifyTurnstileToken } from '@/lib/turnstile';
 
 type SignupPayload = {
   fullName?: string;
@@ -10,6 +11,7 @@ type SignupPayload = {
   phone?: string;
   preferredGame?: string;
   password?: string;
+  turnstileToken?: string;
 };
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -39,6 +41,17 @@ export async function POST(request: Request) {
         { error: 'Password must be at least 8 characters.' },
         { status: 400 }
       );
+    }
+
+    if (process.env.TURNSTILE_SECRET_KEY) {
+      const remoteIp = request.headers.get('cf-connecting-ip') || request.headers.get('x-forwarded-for');
+      const captchaOk = await verifyTurnstileToken(body.turnstileToken ?? '', remoteIp);
+      if (!captchaOk) {
+        return NextResponse.json(
+          { error: 'Verification failed. Please try again.' },
+          { status: 400 }
+        );
+      }
     }
 
     const existing = await db.execute({
