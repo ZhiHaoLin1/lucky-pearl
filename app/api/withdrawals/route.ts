@@ -18,11 +18,12 @@ export async function GET() {
 
   const [deposits, withdrawals] = await Promise.all([
     db.execute({
-      sql: 'SELECT id, amount_cents, method, created_at FROM deposits WHERE user_id = ? ORDER BY created_at DESC',
+      sql: 'SELECT id, amount_cents, method, platform, created_at FROM deposits WHERE user_id = ? ORDER BY created_at DESC',
       args: [sessionUser.id],
     }),
     db.execute({
-      sql: 'SELECT id, amount_cents, method, payout_detail, fee_cents, status, created_at, processed_at FROM withdrawals WHERE user_id = ? ORDER BY created_at DESC',
+      sql: `SELECT id, amount_cents, method, payout_detail, fee_cents, status, created_at, processed_at
+            FROM withdrawals WHERE user_id = ? AND hidden_from_customer_at IS NULL ORDER BY created_at DESC`,
       args: [sessionUser.id],
     }),
   ]);
@@ -71,6 +72,15 @@ export async function POST(request: Request) {
     }
 
     const amountCents = Math.round(amountDollars * 100);
+
+    if (methodInfo.minAmountCents > 0 && amountCents < methodInfo.minAmountCents) {
+      return NextResponse.json(
+        {
+          error: `${methodInfo.label} withdrawals must be at least ${formatCents(methodInfo.minAmountCents)}.`,
+        },
+        { status: 400 }
+      );
+    }
 
     await ensureSchema();
     const summary = await getFinanceSummary(sessionUser.id);
@@ -121,6 +131,43 @@ export async function POST(request: Request) {
   } catch {
     return NextResponse.json(
       { error: 'Unexpected error while requesting a withdrawal.' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PATCH(request: Request) {
+  const sessionUser = await getSessionUser();
+  if (!sessionUser) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  try {
+    const body = await request.json();
+    const id = String(body.id ?? '');
+    if (!id) {
+      return NextResponse.json({ error: 'Missing withdrawal id.' }, { status: 400 });
+    }
+
+    await ensureSchema();
+
+    const result = await db.execute({
+      sql: `UPDATE withdrawals SET hidden_from_customer_at = datetime('now')
+            WHERE id = ? AND user_id = ? AND status = 'completed'`,
+      args: [id, sessionUser.id],
+    });
+
+    if (result.rowsAffected === 0) {
+      return NextResponse.json(
+        { error: 'Only completed withdrawals can be removed from your dashboard.' },
+        { status: 400 }
+      );
+    }
+
+    return NextResponse.json({ ok: true });
+  } catch {
+    return NextResponse.json(
+      { error: 'Unexpected error while updating the withdrawal.' },
       { status: 500 }
     );
   }

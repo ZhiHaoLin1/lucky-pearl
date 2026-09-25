@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { ArrowDownToLine } from 'lucide-react';
+import { ArrowDownToLine, X } from 'lucide-react';
 import { WITHDRAWAL_METHODS, methodLabel, type WithdrawalMethodKey } from '@/lib/withdrawalMethods';
 
 type Tier = {
@@ -72,6 +72,7 @@ export default function WithdrawTab({
   const [payoutDetail, setPayoutDetail] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [dismissingId, setDismissingId] = useState<string | null>(null);
 
   const dailyPct = Math.min(100, (used / tier.dailyLimitCents) * 100);
   const depositPct = nextTier
@@ -82,6 +83,8 @@ export default function WithdrawTab({
   const amountCentsPreview = Number.isFinite(amountNumber) && amountNumber > 0 ? Math.round(amountNumber * 100) : 0;
   const feeCentsPreview = Math.round(amountCentsPreview * WITHDRAWAL_METHODS[method].feeRate);
   const netCentsPreview = amountCentsPreview - feeCentsPreview;
+  const selectedMinCents = WITHDRAWAL_METHODS[method].minAmountCents;
+  const belowMinimum = selectedMinCents > 0 && amountCentsPreview > 0 && amountCentsPreview < selectedMinCents;
 
   const refresh = async () => {
     try {
@@ -106,6 +109,10 @@ export default function WithdrawTab({
     }
     const trimmedDetail = payoutDetail.trim();
     const methodInfo = WITHDRAWAL_METHODS[method];
+    if (methodInfo.minAmountCents > 0 && amountCentsPreview < methodInfo.minAmountCents) {
+      setMessage(`${methodInfo.label} withdrawals must be at least ${formatCents(methodInfo.minAmountCents)}.`);
+      return;
+    }
     if (!trimmedDetail) {
       setMessage(`Enter your ${methodInfo.detailLabel.toLowerCase()}.`);
       return;
@@ -134,6 +141,26 @@ export default function WithdrawTab({
       setMessage(err instanceof Error ? err.message : 'Could not submit your withdrawal request.');
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const dismissWithdrawal = async (id: string) => {
+    setDismissingId(id);
+    setWithdrawals((prev) => prev.filter((w) => w.id !== id));
+    try {
+      const response = await fetch('/api/withdrawals', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
+      });
+      if (!response.ok) {
+        throw new Error();
+      }
+    } catch {
+      // Re-sync from server if the dismiss failed to keep the UI honest.
+      await refresh();
+    } finally {
+      setDismissingId(null);
     }
   };
 
@@ -205,14 +232,19 @@ export default function WithdrawTab({
             {METHOD_KEYS.map((key) => {
               const info = WITHDRAWAL_METHODS[key];
               const selected = method === key;
+              const disabled =
+                !selected && info.minAmountCents > 0 && amountCentsPreview > 0 && amountCentsPreview < info.minAmountCents;
               return (
                 <button
                   key={key}
                   type="button"
-                  onClick={() => setMethod(key)}
+                  onClick={() => !disabled && setMethod(key)}
+                  disabled={disabled}
                   className={`rounded-xl border px-4 py-3 text-left transition-colors ${
                     selected
                       ? 'border-gold-400 bg-gold-500/10'
+                      : disabled
+                      ? 'border-white/5 bg-navy-900/30 opacity-50 cursor-not-allowed'
                       : 'border-white/10 bg-navy-900/60 hover:border-white/20'
                   }`}
                 >
@@ -220,6 +252,11 @@ export default function WithdrawTab({
                   <p className={`text-xs mt-0.5 ${info.feeRate > 0 ? 'text-gold-400' : 'text-emerald-400'}`}>
                     {info.feeDescription}
                   </p>
+                  {info.minAmountCents > 0 && (
+                    <p className="text-pearl-300/50 text-[11px] mt-0.5">
+                      {formatCents(info.minAmountCents)} minimum
+                    </p>
+                  )}
                 </button>
               );
             })}
@@ -255,7 +292,7 @@ export default function WithdrawTab({
             </div>
             <button
               type="submit"
-              disabled={isSubmitting || remaining <= 0}
+              disabled={isSubmitting || remaining <= 0 || belowMinimum}
               className="shrink-0 px-6 py-3.5 rounded-xl bg-gold-gradient text-navy-900 font-bold disabled:opacity-60"
             >
               {isSubmitting ? 'Submitting…' : 'Request Withdrawal'}
@@ -263,11 +300,18 @@ export default function WithdrawTab({
           </div>
 
           {amountCentsPreview > 0 && (
-            <p className="text-pearl-300/60 text-xs">
-              {feeCentsPreview > 0
-                ? `${WITHDRAWAL_METHODS[method].label} fee: ${formatCents(feeCentsPreview)} · You'll receive ${formatCents(netCentsPreview)}`
-                : `No fee · You'll receive ${formatCents(netCentsPreview)}`}
-            </p>
+            belowMinimum ? (
+              <p className="text-red-300 text-xs">
+                {WITHDRAWAL_METHODS[method].label} withdrawals must be at least{' '}
+                {formatCents(selectedMinCents)}. Increase your amount or choose a different payout method.
+              </p>
+            ) : (
+              <p className="text-pearl-300/60 text-xs">
+                {feeCentsPreview > 0
+                  ? `${WITHDRAWAL_METHODS[method].label} fee: ${formatCents(feeCentsPreview)} · You'll receive ${formatCents(netCentsPreview)}`
+                  : `No fee · You'll receive ${formatCents(netCentsPreview)}`}
+              </p>
+            )
           )}
         </form>
         {message && <p className="text-sm text-pearl-100 mb-3">{message}</p>}
@@ -277,6 +321,7 @@ export default function WithdrawTab({
         ) : (
           <div className="space-y-2.5">
             {withdrawals.map((withdrawal) => {
+              const isCompleted = withdrawal.status === 'completed';
               return (
                 <div
                   key={withdrawal.id}
@@ -291,13 +336,27 @@ export default function WithdrawTab({
                     )}
                     <p className="text-pearl-300/40 text-xs">{formatSqliteDate(withdrawal.created_at)}</p>
                   </div>
-                  <span
-                    className={`shrink-0 px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wide border ${
-                      STATUS_STYLES[withdrawal.status] ?? STATUS_STYLES.pending
-                    }`}
-                  >
-                    {withdrawal.status}
-                  </span>
+                  <div className="shrink-0 flex items-center gap-2">
+                    <span
+                      className={`px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wide border ${
+                        STATUS_STYLES[withdrawal.status] ?? STATUS_STYLES.pending
+                      }`}
+                    >
+                      {withdrawal.status}
+                    </span>
+                    {isCompleted && (
+                      <button
+                        type="button"
+                        onClick={() => dismissWithdrawal(withdrawal.id)}
+                        disabled={dismissingId === withdrawal.id}
+                        className="text-pearl-300/40 hover:text-red-300 disabled:opacity-40 transition-colors"
+                        aria-label="Remove from list"
+                        title="Remove from list"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
                 </div>
               );
             })}

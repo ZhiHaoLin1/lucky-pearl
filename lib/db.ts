@@ -114,6 +114,11 @@ export function ensureSchema() {
       if (!withdrawalColumnNames.has('fee_cents')) {
         await db.execute('ALTER TABLE withdrawals ADD COLUMN fee_cents INTEGER NOT NULL DEFAULT 0');
       }
+      // Lets a customer dismiss a completed withdrawal from their own dashboard
+      // view without deleting the underlying record admins still rely on.
+      if (!withdrawalColumnNames.has('hidden_from_customer_at')) {
+        await db.execute('ALTER TABLE withdrawals ADD COLUMN hidden_from_customer_at TEXT');
+      }
 
       // Migration for databases created before the Square integration columns existed.
       const depositColumns = await db.execute('PRAGMA table_info(deposits)');

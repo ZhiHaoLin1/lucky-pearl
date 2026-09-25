@@ -6,6 +6,7 @@ export const WITHDRAWAL_METHODS = {
     detailLabel: 'Zelle email or phone number',
     detailPlaceholder: 'you@example.com or (555) 555-5555',
     detailPrefix: null as string | null,
+    minAmountCents: 0,
   },
   cashapp: {
     label: 'Cash App',
@@ -14,6 +15,8 @@ export const WITHDRAWAL_METHODS = {
     detailLabel: 'Cashtag',
     detailPlaceholder: '$yourcashtag',
     detailPrefix: '$',
+    // Cash App cashouts below this can't be processed on our end.
+    minAmountCents: 11000,
   },
   chime: {
     label: 'Chime',
@@ -22,6 +25,7 @@ export const WITHDRAWAL_METHODS = {
     detailLabel: 'Chime tag',
     detailPlaceholder: '$yourchimetag',
     detailPrefix: '$',
+    minAmountCents: 0,
   },
 } as const;
 

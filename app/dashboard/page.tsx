@@ -17,6 +17,8 @@ const games: Array<{ slug: keyof typeof gamePlayUrls; name: string; emoji: strin
   { slug: 'magic-city', name: 'Magic City', emoji: '🏙️', accentColor: '#e879f9' },
   { slug: 'river', name: 'River', emoji: '🌊', accentColor: '#34d399' },
   { slug: 'fire-phoenix', name: 'Fire Phoenix', emoji: '🔥', accentColor: '#ff6b35' },
+  { slug: 'ultra-thunder', name: 'Ultra Thunder', emoji: '⚡', accentColor: '#60a5fa' },
+  { slug: 'dragon-fury', name: 'Dragon Fury', emoji: '🐲', accentColor: '#a855f7' },
 ];
 
 export default async function DashboardPage() {
@@ -56,7 +58,8 @@ export default async function DashboardPage() {
   const financeSummary = await getFinanceSummary(user.id);
   const nextTier = getNextTier(financeSummary.tier);
   const withdrawalsResult = await db.execute({
-    sql: 'SELECT id, amount_cents, method, payout_detail, fee_cents, status, created_at FROM withdrawals WHERE user_id = ? ORDER BY created_at DESC',
+    sql: `SELECT id, amount_cents, method, payout_detail, fee_cents, status, created_at
+          FROM withdrawals WHERE user_id = ? AND hidden_from_customer_at IS NULL ORDER BY created_at DESC`,
     args: [user.id],
   });
   const initialWithdrawals = withdrawalsResult.rows.map((row) => ({
