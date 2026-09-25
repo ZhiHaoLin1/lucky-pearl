@@ -69,6 +69,18 @@ export default async function DashboardPage() {
     created_at: String(row.created_at),
   }));
 
+  const depositsResult = await db.execute({
+    sql: 'SELECT id, amount_cents, method, platform, created_at FROM deposits WHERE user_id = ? ORDER BY created_at DESC',
+    args: [user.id],
+  });
+  const initialDeposits = depositsResult.rows.map((row) => ({
+    id: String(row.id),
+    amount_cents: Number(row.amount_cents),
+    method: row.method ? String(row.method) : null,
+    platform: row.platform ? String(row.platform) : null,
+    created_at: String(row.created_at),
+  }));
+
   return (
     <main
       className="min-h-screen pb-20"
@@ -194,6 +206,7 @@ export default async function DashboardPage() {
             remainingTodayCents: financeSummary.remainingTodayCents,
             initialWithdrawals,
           }}
+          initialDeposits={initialDeposits}
         />
 
         <InboxClient initialMessages={messages} />
