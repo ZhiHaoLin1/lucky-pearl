@@ -59,7 +59,26 @@ export function ensureSchema() {
             method TEXT,
             note TEXT,
             recorded_by_admin_id TEXT,
+            square_payment_id TEXT,
+            square_charged_cents INTEGER,
+            platform TEXT,
             created_at TEXT NOT NULL DEFAULT (datetime('now'))
+          )`
+        ),
+        db.execute(
+          `CREATE TABLE IF NOT EXISTS square_unmatched_payments (
+            id TEXT PRIMARY KEY,
+            square_payment_id TEXT NOT NULL UNIQUE,
+            amount_cents INTEGER NOT NULL,
+            square_charged_cents INTEGER,
+            platform TEXT,
+            parsed_name TEXT,
+            note TEXT,
+            reason TEXT NOT NULL,
+            created_at TEXT NOT NULL DEFAULT (datetime('now')),
+            resolved_at TEXT,
+            resolved_user_id TEXT,
+            resolved_by_admin_id TEXT
           )`
         ),
         db.execute(
@@ -89,6 +108,19 @@ export function ensureSchema() {
       }
       if (!withdrawalColumnNames.has('fee_cents')) {
         await db.execute('ALTER TABLE withdrawals ADD COLUMN fee_cents INTEGER NOT NULL DEFAULT 0');
+      }
+
+      // Migration for databases created before the Square integration columns existed.
+      const depositColumns = await db.execute('PRAGMA table_info(deposits)');
+      const depositColumnNames = new Set(depositColumns.rows.map((row) => String(row.name)));
+      if (!depositColumnNames.has('square_payment_id')) {
+        await db.execute('ALTER TABLE deposits ADD COLUMN square_payment_id TEXT');
+      }
+      if (!depositColumnNames.has('square_charged_cents')) {
+        await db.execute('ALTER TABLE deposits ADD COLUMN square_charged_cents INTEGER');
+      }
+      if (!depositColumnNames.has('platform')) {
+        await db.execute('ALTER TABLE deposits ADD COLUMN platform TEXT');
       }
     })();
   }

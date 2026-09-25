@@ -1,8 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Mail, Megaphone, Phone, Send, Trash2, Users } from 'lucide-react';
+import { AlertTriangle, Mail, Megaphone, Phone, Send, Trash2, Users } from 'lucide-react';
 import AdminFinancePanel from './AdminFinancePanel';
+import SquareQueuePanel from './SquareQueuePanel';
 
 export type AdminCustomer = {
   id: string;
@@ -26,7 +27,13 @@ function formatSqliteDate(value: string) {
   return new Date(value.replace(' ', 'T') + 'Z').toLocaleString('en-US');
 }
 
-export default function AdminDashboardClient({ customers: initialCustomers }: { customers: AdminCustomer[] }) {
+export default function AdminDashboardClient({
+  customers: initialCustomers,
+  initialSquareQueueCount = 0,
+}: {
+  customers: AdminCustomer[];
+  initialSquareQueueCount?: number;
+}) {
   const [customers, setCustomers] = useState(initialCustomers);
   const [checkedIds, setCheckedIds] = useState<Set<string>>(new Set());
   const [activeId, setActiveId] = useState<string | null>(initialCustomers[0]?.id ?? null);
@@ -37,10 +44,11 @@ export default function AdminDashboardClient({ customers: initialCustomers }: { 
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [detailTab, setDetailTab] = useState<'messages' | 'finance'>('messages');
-  const [view, setView] = useState<'customers' | 'broadcast'>('customers');
+  const [view, setView] = useState<'customers' | 'broadcast' | 'square'>('customers');
   const [broadcastBody, setBroadcastBody] = useState('');
   const [isBroadcasting, setIsBroadcasting] = useState(false);
   const [broadcastMessage, setBroadcastMessage] = useState<string | null>(null);
+  const [squareQueueCount, setSquareQueueCount] = useState(initialSquareQueueCount);
 
   const activeCustomer = customers.find((customer) => customer.id === activeId) ?? null;
 
@@ -212,7 +220,7 @@ export default function AdminDashboardClient({ customers: initialCustomers }: { 
   return (
     <div>
       <div className="flex gap-2 mb-5 border-b border-white/10">
-        {(['customers', 'broadcast'] as const).map((key) => (
+        {(['customers', 'broadcast', 'square'] as const).map((key) => (
           <button
             key={key}
             type="button"
@@ -223,8 +231,15 @@ export default function AdminDashboardClient({ customers: initialCustomers }: { 
                 : 'border-transparent text-pearl-300/60 hover:text-pearl-100'
             }`}
           >
-            {key === 'customers' ? <Users className="w-4 h-4" /> : <Megaphone className="w-4 h-4" />}
-            {key === 'customers' ? 'Customers' : 'Mass Message'}
+            {key === 'customers' && <Users className="w-4 h-4" />}
+            {key === 'broadcast' && <Megaphone className="w-4 h-4" />}
+            {key === 'square' && <AlertTriangle className="w-4 h-4" />}
+            {key === 'customers' ? 'Customers' : key === 'broadcast' ? 'Mass Message' : 'Square Queue'}
+            {key === 'square' && squareQueueCount > 0 && (
+              <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-gold-500/20 text-gold-400">
+                {squareQueueCount}
+              </span>
+            )}
           </button>
         ))}
       </div>
@@ -299,6 +314,8 @@ export default function AdminDashboardClient({ customers: initialCustomers }: { 
           </form>
           {broadcastMessage && <p className="mt-3 text-sm text-pearl-100">{broadcastMessage}</p>}
         </div>
+      ) : view === 'square' ? (
+        <SquareQueuePanel customers={customers} onCountChange={setSquareQueueCount} />
       ) : (
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-1 rounded-2xl border border-gold-600/25 bg-navy-800/60 overflow-hidden">

@@ -40,6 +40,11 @@ export default async function AdminPage() {
     unreadCount: Number(row.unread_count),
   }));
 
+  const squareQueueResult = await db.execute(
+    "SELECT COUNT(*) AS c FROM square_unmatched_payments WHERE resolved_at IS NULL"
+  );
+  const squareQueueCount = Number(squareQueueResult.rows[0]?.c ?? 0);
+
   return (
     <main
       className="min-h-screen pb-20"
@@ -73,7 +78,7 @@ export default async function AdminPage() {
           </h1>
         </div>
 
-        <AdminDashboardClient customers={customers} />
+        <AdminDashboardClient customers={customers} initialSquareQueueCount={squareQueueCount} />
       </div>
     </main>
   );
