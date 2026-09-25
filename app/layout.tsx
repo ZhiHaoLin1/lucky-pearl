@@ -3,11 +3,11 @@ import './globals.css';
 
 export const metadata: Metadata = {
   title: 'Lucky Pearl — Premium Online Gaming',
-  description: 'Experience the thrill of Golden Dragon, Magic City, River, and Fire Phoenix at Lucky Pearl — the premier online gaming destination.',
-  keywords: 'Lucky Pearl, online gaming, Golden Dragon, Magic City, River, Fire Phoenix',
+  description: 'Experience the thrill of Golden Dragon, Magic City, River, Fire Phoenix, Ultra Thunder, and Dragon Fury at Lucky Pearl — the premier online gaming destination.',
+  keywords: 'Lucky Pearl, online gaming, Golden Dragon, Magic City, River, Fire Phoenix, Ultra Thunder, Dragon Fury',
   openGraph: {
     title: 'Lucky Pearl — Premium Online Gaming',
-    description: 'Where fortune favors the bold. Play Golden Dragon, Magic City, River & Fire Phoenix.',
+    description: 'Where fortune favors the bold. Play Golden Dragon, Magic City, River, Fire Phoenix, Ultra Thunder & Dragon Fury.',
     type: 'website',
   },
 };

@@ -16,6 +16,8 @@ const PLATFORM_LABELS: Record<string, string> = {
   MC: 'Magic City',
   RV: 'River',
   FP: 'Fire Phoenix',
+  UT: 'Ultra Thunder',
+  DF: 'Dragon Fury',
 };
 
 function formatCents(cents: number) {

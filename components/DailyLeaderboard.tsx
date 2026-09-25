@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { americanNames1000 } from '@/lib/americanNames';
 
-const GAME_PLATFORMS = ['Golden Dragon', 'Magic City', 'River', 'Fire Phoenix'] as const;
+const GAME_PLATFORMS = ['Golden Dragon', 'Magic City', 'River', 'Fire Phoenix', 'Ultra Thunder', 'Dragon Fury'] as const;
 
 type LeaderboardEntry = {
   firstName: string;

@@ -1,7 +1,7 @@
 import { Gem } from 'lucide-react';
 
 const footerLinks = {
-  Games: ['Golden Dragon', 'Magic City', 'River', 'Fire Phoenix', 'All Games'],
+  Games: ['Golden Dragon', 'Magic City', 'River', 'Fire Phoenix', 'Ultra Thunder', 'Dragon Fury', 'All Games'],
   Company: ['About Us', 'Careers', 'Press', 'Partners', 'Blog'],
   Support: ['Help Center', 'Live Chat', 'Email Support', 'Responsible Gaming', 'FAQ'],
   Legal: ['Terms of Service', 'Privacy Policy', 'Cookie Policy', 'AML Policy', 'Licenses'],

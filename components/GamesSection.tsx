@@ -114,6 +114,50 @@ const games: Game[] = [
                 radial-gradient(ellipse at 80% 20%, rgba(255,107,53,0.4) 0%, transparent 50%)`,
     features: ['Phoenix Respin', 'Inferno Multiplier x100', 'Rebirth Jackpot'],
   },
+  {
+    slug: 'ultra-thunder',
+    name: 'Ultra Thunder',
+    subtitle: '雷神',
+    tagline: 'Command the Storm, Claim the Lightning',
+    description:
+      'Storm clouds gather over an electrified sky arena where the Thunder God tests every challenger. Charged wilds strike down across the reels, chaining bolts of lightning into cascading multiplied wins.',
+    rtp: '96.4%',
+    minBet: '$0.20',
+    maxBet: '$600',
+    volatility: 'High',
+    jackpot: '$1,480,000',
+    players: '2,764',
+    badge: '⚡ ELECTRIFYING',
+    gradient: 'linear-gradient(135deg, #0a1128 0%, #1b2a5e 30%, #3a5fcd 60%, #60d4f5 100%)',
+    glowColor: 'rgba(96, 165, 250, 0.6)',
+    iconEmoji: '⚡',
+    accentColor: '#60a5fa',
+    bgPattern: `radial-gradient(ellipse at 20% 80%, rgba(30,60,150,0.4) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 20%, rgba(96,212,245,0.3) 0%, transparent 50%)`,
+    features: ['Thunder Wild Strike', 'Storm Free Spins', 'Chain Lightning Multiplier'],
+  },
+  {
+    slug: 'dragon-fury',
+    name: 'Dragon Fury',
+    subtitle: '龙怒',
+    tagline: "Unleash the Dragon's Wrath",
+    description:
+      'A raging dragon tears through a shattered sky, its fury igniting every reel it crosses. Volatile wild storms and a rage meter that builds with every spin unleash some of our biggest jackpot swings.',
+    rtp: '95.9%',
+    minBet: '$0.25',
+    maxBet: '$750',
+    volatility: 'Very High',
+    jackpot: '$1,780,000',
+    players: '3,015',
+    badge: '💥 RAGING',
+    gradient: 'linear-gradient(135deg, #1a0526 0%, #3d0a4f 30%, #7c1d8c 60%, #a855f7 100%)',
+    glowColor: 'rgba(168, 85, 247, 0.6)',
+    iconEmoji: '🐲',
+    accentColor: '#a855f7',
+    bgPattern: `radial-gradient(ellipse at 20% 80%, rgba(90,10,110,0.5) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 20%, rgba(168,85,247,0.35) 0%, transparent 50%)`,
+    features: ['Rage Meter Wild', 'Fury Free Spins', 'Shattered Sky Jackpot'],
+  },
 ];
 
 const volatilityColors: Record<Game['volatility'], string> = {
@@ -158,7 +202,7 @@ export default function GamesSection() {
             className="text-pearl-200/50 text-lg mt-4 max-w-xl mx-auto"
             style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic' }}
           >
-            Four legendary realms. Infinite fortunes. Your saga begins now.
+            Six legendary realms. Infinite fortunes. Your saga begins now.
           </p>
         </div>
 
