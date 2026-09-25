@@ -6,8 +6,9 @@ const supportItems = [
   },
   {
     icon: '📱',
-    title: 'Text Support',
-    description: 'Reach our team by text message. Live support is available daily from 10:00 AM to 10:00 PM EST.',
+    title: 'Text or Call Us',
+    description: 'Please text first so we know to expect your call. Available daily from 10:00 AM to 10:00 PM EST.',
+    phone: '407-796-8311',
   },
   {
     icon: '🔐',
@@ -69,6 +70,25 @@ export default function SupportSection() {
               >
                 {item.description}
               </p>
+              {item.phone && (
+                <div className="flex items-center justify-center gap-4 mt-4">
+                  <a
+                    href={`sms:+1${item.phone.replace(/[^0-9]/g, '')}`}
+                    className="text-gold-400 hover:text-gold-300 font-bold text-sm transition-colors"
+                    style={{ fontFamily: "'Cinzel', serif" }}
+                  >
+                    Text {item.phone}
+                  </a>
+                  <span className="text-pearl-300/20">|</span>
+                  <a
+                    href={`tel:+1${item.phone.replace(/[^0-9]/g, '')}`}
+                    className="text-pearl-300/50 hover:text-pearl-100 font-bold text-sm transition-colors"
+                    style={{ fontFamily: "'Cinzel', serif" }}
+                  >
+                    Call
+                  </a>
+                </div>
+              )}
             </div>
           ))}
         </div>

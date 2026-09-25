@@ -31,7 +31,7 @@ export const VIP_TIERS: VipTier[] = [
     color: '#d4af37',
     minDepositsCents: 1_000_000,
     dailyLimitCents: 30_000,
-    features: ['Major holiday bonus', 'Extended cashout hours starting 9AM'],
+    features: ['Card & Apple Pay deposits unlocked', 'Major holiday bonus', 'Extended cashout hours starting 9AM'],
     highlighted: true,
   },
   {

@@ -1,9 +1,9 @@
 const processors = [
-  { name: 'Venmo', icon: '📲', highlight: true },
-  { name: 'Zelle', icon: '💸', highlight: true },
-  { name: 'Cash App', icon: '💵', highlight: false },
-  { name: 'Cards', icon: '💳', highlight: false },
-  { name: 'Apple Pay', icon: '🍎', highlight: false },
+  { name: 'Venmo', icon: '📲', highlight: true, lockedUntil: null },
+  { name: 'Zelle', icon: '💸', highlight: true, lockedUntil: null },
+  { name: 'Cash App', icon: '💵', highlight: false, lockedUntil: null },
+  { name: 'Cards', icon: '💳', highlight: false, lockedUntil: 'Gold tier+' },
+  { name: 'Apple Pay', icon: '🍎', highlight: false, lockedUntil: 'Gold tier+' },
 ];
 
 export default function PaymentProcessorsSection() {
@@ -40,16 +40,27 @@ export default function PaymentProcessorsSection() {
                 boxShadow: processor.highlight ? '0 0 40px rgba(212,175,55,0.15)' : 'none',
               }}
             >
-              <div className={`mb-2 ${processor.highlight ? 'text-5xl sm:text-6xl' : 'text-4xl sm:text-5xl'}`}>
+              <div className={`mb-2 ${processor.highlight ? 'text-5xl sm:text-6xl' : 'text-4xl sm:text-5xl'} ${processor.lockedUntil ? 'opacity-60' : ''}`}>
                 {processor.icon}
               </div>
-              <p className="text-white font-bold text-lg sm:text-xl tracking-wide">{processor.name}</p>
+              <p className={`text-white font-bold text-lg sm:text-xl tracking-wide ${processor.lockedUntil ? 'opacity-60' : ''}`}>
+                {processor.name}
+              </p>
               {processor.highlight && (
                 <p className="text-gold-200/80 text-sm mt-2 font-medium">Popular choice</p>
+              )}
+              {processor.lockedUntil && (
+                <p className="text-gold-400/90 text-xs mt-2 font-semibold uppercase tracking-wide">
+                  {processor.lockedUntil}
+                </p>
               )}
             </div>
           ))}
         </div>
+
+        <p className="text-pearl-300/50 text-sm mt-8">
+          Cards and Apple Pay unlock once you reach <span className="text-gold-400 font-semibold">Gold tier</span>.
+        </p>
       </div>
     </section>
   );
