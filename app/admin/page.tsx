@@ -46,6 +46,11 @@ export default async function AdminPage() {
   );
   const squareQueueCount = Number(squareQueueResult.rows[0]?.c ?? 0);
 
+  const emailQueueResult = await db.execute(
+    "SELECT COUNT(*) AS c FROM email_unmatched_payments WHERE resolved_at IS NULL"
+  );
+  const emailQueueCount = Number(emailQueueResult.rows[0]?.c ?? 0);
+
   return (
     <main
       className="min-h-screen pb-20"
@@ -79,7 +84,11 @@ export default async function AdminPage() {
           </h1>
         </div>
 
-        <AdminDashboardClient customers={customers} initialSquareQueueCount={squareQueueCount} />
+        <AdminDashboardClient
+          customers={customers}
+          initialSquareQueueCount={squareQueueCount}
+          initialEmailQueueCount={emailQueueCount}
+        />
       </div>
     </main>
   );

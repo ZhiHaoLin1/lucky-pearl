@@ -92,6 +92,22 @@ export function ensureSchema() {
           )`
         ),
         db.execute(
+          `CREATE TABLE IF NOT EXISTS email_unmatched_payments (
+            id TEXT PRIMARY KEY,
+            email_message_id TEXT NOT NULL UNIQUE,
+            source TEXT NOT NULL,
+            amount_cents INTEGER,
+            sender_email TEXT,
+            subject TEXT,
+            parsed_name TEXT,
+            reason TEXT NOT NULL,
+            created_at TEXT NOT NULL DEFAULT (datetime('now')),
+            resolved_at TEXT,
+            resolved_user_id TEXT,
+            resolved_by_admin_id TEXT
+          )`
+        ),
+        db.execute(
           `CREATE TABLE IF NOT EXISTS withdrawals (
             id TEXT PRIMARY KEY,
             user_id TEXT NOT NULL,
@@ -136,6 +152,11 @@ export function ensureSchema() {
       }
       if (!depositColumnNames.has('platform')) {
         await db.execute('ALTER TABLE deposits ADD COLUMN platform TEXT');
+      }
+      // For deposits auto-matched from a Venmo/Zelle notification email —
+      // dedup key, parallel to square_payment_id.
+      if (!depositColumnNames.has('email_message_id')) {
+        await db.execute('ALTER TABLE deposits ADD COLUMN email_message_id TEXT');
       }
     })();
   }
