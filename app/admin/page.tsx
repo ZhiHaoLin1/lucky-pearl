@@ -20,7 +20,7 @@ export default async function AdminPage() {
   await ensureSchema();
   const result = await db.execute(`
     SELECT
-      u.id, u.full_name, u.email, u.phone, u.preferred_game, u.created_at,
+      u.id, u.full_name, u.username, u.email, u.phone, u.preferred_game, u.created_at,
       (
         SELECT COUNT(*) FROM messages m
         WHERE m.user_id = u.id AND m.sender_admin_id IS NULL AND m.read_at IS NULL
@@ -33,6 +33,7 @@ export default async function AdminPage() {
   const customers: AdminCustomer[] = result.rows.map((row) => ({
     id: String(row.id),
     fullName: String(row.full_name),
+    username: row.username ? String(row.username) : null,
     email: String(row.email),
     phone: String(row.phone),
     preferredGame: row.preferred_game ? String(row.preferred_game) : null,

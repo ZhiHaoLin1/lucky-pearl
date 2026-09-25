@@ -1,13 +1,14 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { AlertTriangle, Mail, Megaphone, Phone, Send, Trash2, Users } from 'lucide-react';
+import { AlertTriangle, AtSign, Check, Mail, Megaphone, Pencil, Phone, Send, Trash2, Users } from 'lucide-react';
 import AdminFinancePanel from './AdminFinancePanel';
 import SquareQueuePanel from './SquareQueuePanel';
 
 export type AdminCustomer = {
   id: string;
   fullName: string;
+  username: string | null;
   email: string;
   phone: string;
   preferredGame: string | null;
@@ -49,6 +50,10 @@ export default function AdminDashboardClient({
   const [isBroadcasting, setIsBroadcasting] = useState(false);
   const [broadcastMessage, setBroadcastMessage] = useState<string | null>(null);
   const [squareQueueCount, setSquareQueueCount] = useState(initialSquareQueueCount);
+  const [isEditingUsername, setIsEditingUsername] = useState(false);
+  const [usernameDraft, setUsernameDraft] = useState('');
+  const [isSavingUsername, setIsSavingUsername] = useState(false);
+  const [usernameError, setUsernameError] = useState<string | null>(null);
 
   const activeCustomer = customers.find((customer) => customer.id === activeId) ?? null;
 
@@ -69,6 +74,8 @@ export default function AdminDashboardClient({
       return;
     }
     let cancelled = false;
+    setIsEditingUsername(false);
+    setUsernameError(null);
     setMessagesLoading(true);
     fetch(`/api/admin/messages?userId=${encodeURIComponent(activeId)}`)
       .then((res) => res.json())
@@ -131,6 +138,38 @@ export default function AdminDashboardClient({
     } catch {
       // Re-sync from server if the delete failed to keep the UI honest.
       loadMessages(activeId);
+    }
+  };
+
+  const startEditingUsername = () => {
+    setUsernameDraft(activeCustomer?.username ?? '');
+    setUsernameError(null);
+    setIsEditingUsername(true);
+  };
+
+  const saveUsername = async () => {
+    if (!activeCustomer) return;
+    setIsSavingUsername(true);
+    setUsernameError(null);
+    try {
+      const response = await fetch('/api/admin/customers', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: activeCustomer.id, username: usernameDraft.trim() }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data?.error || 'Could not save the username.');
+      }
+      const saved = usernameDraft.trim() || null;
+      setCustomers((prev) =>
+        prev.map((customer) => (customer.id === activeCustomer.id ? { ...customer, username: saved } : customer))
+      );
+      setIsEditingUsername(false);
+    } catch (err) {
+      setUsernameError(err instanceof Error ? err.message : 'Could not save the username.');
+    } finally {
+      setIsSavingUsername(false);
     }
   };
 
@@ -343,7 +382,10 @@ export default function AdminDashboardClient({
                   className="flex-1 min-w-0 text-left"
                 >
                   <p className="text-pearl-100 font-semibold text-sm truncate">{customer.fullName}</p>
-                  <p className="text-pearl-300/60 text-xs truncate">{customer.email}</p>
+                  <p className="text-pearl-300/60 text-xs truncate">
+                    {customer.email}
+                    {customer.username && <span className="text-pearl-300/40"> · @{customer.username}</span>}
+                  </p>
                 </button>
                 {customer.unreadCount > 0 && (
                   <span className="shrink-0 px-2 py-0.5 rounded-full text-xs font-bold bg-gold-500/20 text-gold-400">
@@ -362,7 +404,49 @@ export default function AdminDashboardClient({
             <>
               <div className="mb-5 pb-5 border-b border-white/10 flex items-start justify-between gap-3">
                 <div>
-                  <h2 className="text-lg font-bold text-white mb-3">{activeCustomer.fullName}</h2>
+                  <h2 className="text-lg font-bold text-white mb-1">{activeCustomer.fullName}</h2>
+                  <div className="mb-3">
+                    {isEditingUsername ? (
+                      <div className="flex items-center gap-2">
+                        <AtSign className="w-3.5 h-3.5 text-gold-400 shrink-0" />
+                        <input
+                          type="text"
+                          value={usernameDraft}
+                          onChange={(event) => setUsernameDraft(event.target.value)}
+                          placeholder="username"
+                          autoFocus
+                          className="w-40 rounded-lg bg-navy-900 border border-gold-600/25 px-2 py-1 text-xs text-pearl-100 focus:border-gold-400 focus:outline-none"
+                        />
+                        <button
+                          type="button"
+                          onClick={saveUsername}
+                          disabled={isSavingUsername}
+                          className="text-green-400 hover:text-green-300 disabled:opacity-60"
+                          aria-label="Save username"
+                        >
+                          <Check className="w-4 h-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setIsEditingUsername(false)}
+                          className="text-pearl-300/50 hover:text-pearl-100 text-xs"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={startEditingUsername}
+                        className="flex items-center gap-1.5 text-xs text-pearl-300/60 hover:text-gold-400 transition-colors"
+                      >
+                        <AtSign className="w-3.5 h-3.5" />
+                        {activeCustomer.username ? `@${activeCustomer.username}` : 'Set username'}
+                        <Pencil className="w-3 h-3" />
+                      </button>
+                    )}
+                    {usernameError && <p className="text-red-300 text-xs mt-1">{usernameError}</p>}
+                  </div>
                   <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
                     <span className="flex items-center gap-2 text-pearl-300/80">
                       <Mail className="w-4 h-4 text-gold-400" />

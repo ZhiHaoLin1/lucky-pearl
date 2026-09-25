@@ -27,9 +27,14 @@ export function ensureSchema() {
 
       // Migration for databases created before the `role` column existed.
       const columns = await db.execute('PRAGMA table_info(users)');
-      const hasRole = columns.rows.some((row) => String(row.name) === 'role');
-      if (!hasRole) {
+      const columnNames = new Set(columns.rows.map((row) => String(row.name)));
+      if (!columnNames.has('role')) {
         await db.execute("ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'customer'");
+      }
+      // Optional platform username (e.g. a game account handle), for matching
+      // payment notes that reference a username instead of the customer's name.
+      if (!columnNames.has('username')) {
+        await db.execute('ALTER TABLE users ADD COLUMN username TEXT');
       }
 
       await Promise.all([

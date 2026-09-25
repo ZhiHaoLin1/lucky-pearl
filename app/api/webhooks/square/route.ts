@@ -84,9 +84,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true, matched: false });
   }
 
-  const usersResult = await db.execute("SELECT id, full_name FROM users WHERE role != 'admin'");
+  const usersResult = await db.execute("SELECT id, full_name, username FROM users WHERE role != 'admin'");
   const match = matchCustomerByName(
-    usersResult.rows.map((row) => ({ id: row.id, full_name: row.full_name })),
+    usersResult.rows.map((row) => ({ id: row.id, full_name: row.full_name, username: row.username })),
     parsed.name
   );
 
