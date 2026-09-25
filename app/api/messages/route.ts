@@ -44,6 +44,24 @@ export async function POST(request: Request) {
       args: [id, sessionUser.id, text],
     });
 
+    const webhookUrl = process.env.DISCORD_INBOX_WEBHOOK_URL || process.env.DISCORD_WEBHOOK_URL;
+    if (webhookUrl) {
+      fetch(webhookUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          content: [
+            '📨 New inbox message from a customer',
+            `Name: ${sessionUser.fullName}`,
+            `Email: ${sessionUser.email}`,
+            `Message: ${text}`,
+            '',
+            'Reply: https://www.luckypearl.app/admin',
+          ].join('\n'),
+        }),
+      }).catch(() => {});
+    }
+
     return NextResponse.json({ ok: true });
   } catch {
     return NextResponse.json(

@@ -5,10 +5,11 @@ import { db, ensureSchema } from '@/lib/db';
 import { getSessionUser } from '@/lib/auth';
 import { gamePlayUrls } from '@/lib/gamePlayUrls';
 import { getFinanceSummary } from '@/lib/finance';
-import { getNextTier } from '@/lib/vip';
+import { getNextTier, VIP_TIERS } from '@/lib/vip';
 import LogoutButton from './LogoutButton';
 import InboxClient from './InboxClient';
 import DashboardTabs from './DashboardTabs';
+import HowToDepositCard from './HowToDepositCard';
 
 export const dynamic = 'force-dynamic';
 
@@ -57,6 +58,9 @@ export default async function DashboardPage() {
 
   const financeSummary = await getFinanceSummary(user.id);
   const nextTier = getNextTier(financeSummary.tier);
+  const goldIndex = VIP_TIERS.findIndex((tier) => tier.name === 'Gold');
+  const currentTierIndex = VIP_TIERS.findIndex((tier) => tier.name === financeSummary.tier.name);
+  const isGoldOrAbove = currentTierIndex >= goldIndex;
   const withdrawalsResult = await db.execute({
     sql: `SELECT id, amount_cents, method, payout_detail, fee_cents, status, created_at
           FROM withdrawals WHERE user_id = ? AND hidden_from_customer_at IS NULL ORDER BY created_at DESC`,
@@ -120,6 +124,7 @@ export default async function DashboardPage() {
 
         <DashboardTabs
           overview={
+            <div className="space-y-6">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <div className="lg:col-span-1 rounded-2xl border border-gold-600/25 bg-navy-800/60 p-6">
                 <h2
@@ -200,6 +205,8 @@ export default async function DashboardPage() {
             </div>
               </div>
             </div>
+            <HowToDepositCard isGoldOrAbove={isGoldOrAbove} />
+            </div>
           }
           withdrawProps={{
             tier: financeSummary.tier,
@@ -215,12 +222,24 @@ export default async function DashboardPage() {
         <InboxClient initialMessages={messages} />
 
         <div className="rounded-2xl border border-gold-600/25 bg-navy-800/40 p-6 text-center">
+          <p className="text-pearl-300/70 text-sm mb-2">
+            Need a game account, a redeem, or help with anything else?
+          </p>
           <p className="text-pearl-300/70 text-sm">
-            Need a redeem, a deposit, or help with your account? Reach our team from the{' '}
-            <a href="/#support" className="text-gold-400 hover:text-gold-300 underline underline-offset-2">
-              Support section
-            </a>
-            .
+            <a
+              href="sms:+14077968311"
+              className="text-gold-400 hover:text-gold-300 font-semibold underline underline-offset-2"
+            >
+              Text 407-796-8311
+            </a>{' '}
+            <span className="text-pearl-300/30">·</span>{' '}
+            <a
+              href="tel:+14077968311"
+              className="text-pearl-300/60 hover:text-pearl-100 font-semibold underline underline-offset-2"
+            >
+              Call
+            </a>{' '}
+            (please text first), or send a message using the Inbox above.
           </p>
         </div>
       </div>
