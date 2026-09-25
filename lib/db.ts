@@ -36,6 +36,11 @@ export function ensureSchema() {
       if (!columnNames.has('username')) {
         await db.execute('ALTER TABLE users ADD COLUMN username TEXT');
       }
+      // Admin-set VIP tier override (one of the VIP_TIERS names). NULL means
+      // the tier is auto-derived from lifetime deposits as usual.
+      if (!columnNames.has('tier_override')) {
+        await db.execute('ALTER TABLE users ADD COLUMN tier_override TEXT');
+      }
 
       await Promise.all([
         db.execute(

@@ -1,6 +1,12 @@
 import { db } from './db';
-import { getTierForDeposits } from './vip';
+import { getTierForDeposits, VIP_TIERS } from './vip';
 import { getEasternDayRangeUtc, toSqliteDateTime } from './easternDay';
+
+export async function getTierOverride(userId: string): Promise<string | null> {
+  const result = await db.execute({ sql: 'SELECT tier_override FROM users WHERE id = ?', args: [userId] });
+  const value = result.rows[0]?.tier_override;
+  return value ? String(value) : null;
+}
 
 export async function getLifetimeDepositsCents(userId: string): Promise<number> {
   const result = await db.execute({
@@ -21,11 +27,13 @@ export async function getTodaysWithdrawnCents(userId: string): Promise<number> {
 }
 
 export async function getFinanceSummary(userId: string) {
-  const [lifetimeDepositsCents, todaysWithdrawnCents] = await Promise.all([
+  const [lifetimeDepositsCents, todaysWithdrawnCents, tierOverride] = await Promise.all([
     getLifetimeDepositsCents(userId),
     getTodaysWithdrawnCents(userId),
+    getTierOverride(userId),
   ]);
-  const tier = getTierForDeposits(lifetimeDepositsCents);
+  const overriddenTier = tierOverride ? VIP_TIERS.find((t) => t.name === tierOverride) : undefined;
+  const tier = overriddenTier ?? getTierForDeposits(lifetimeDepositsCents);
   const remainingTodayCents = Math.max(0, tier.dailyLimitCents - todaysWithdrawnCents);
-  return { lifetimeDepositsCents, todaysWithdrawnCents, tier, remainingTodayCents };
+  return { lifetimeDepositsCents, todaysWithdrawnCents, tier, remainingTodayCents, tierOverride };
 }

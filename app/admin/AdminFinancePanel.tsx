@@ -20,6 +20,7 @@ type WithdrawalRow = {
 
 type FinanceData = {
   tier: Tier;
+  tierOverride: string | null;
   nextTier: NextTier;
   lifetimeDepositsCents: number;
   todaysWithdrawnCents: number;
@@ -27,6 +28,8 @@ type FinanceData = {
   deposits: DepositRow[];
   withdrawals: WithdrawalRow[];
 };
+
+const TIER_NAMES = ['Pearl', 'Jade', 'Gold', 'Dragon'];
 
 function formatCents(cents: number) {
   return (cents / 100).toLocaleString('en-US', {
@@ -53,6 +56,7 @@ export default function AdminFinancePanel({ customerId }: { customerId: string }
   const [depositAmount, setDepositAmount] = useState('');
   const [depositMethod, setDepositMethod] = useState('zelle');
   const [isAddingDeposit, setIsAddingDeposit] = useState(false);
+  const [isSavingTier, setIsSavingTier] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const load = () => {
@@ -97,6 +101,27 @@ export default function AdminFinancePanel({ customerId }: { customerId: string }
     }
   };
 
+  const updateTierOverride = async (value: string) => {
+    setError(null);
+    setIsSavingTier(true);
+    try {
+      const response = await fetch('/api/admin/finance', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: customerId, tierOverride: value || null }),
+      });
+      const json = await response.json();
+      if (!response.ok) {
+        throw new Error(json?.error || 'Could not update the tier.');
+      }
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not update the tier.');
+    } finally {
+      setIsSavingTier(false);
+    }
+  };
+
   const updateWithdrawalStatus = async (id: string, status: string) => {
     setError(null);
     try {
@@ -129,12 +154,34 @@ export default function AdminFinancePanel({ customerId }: { customerId: string }
           <p className="text-pearl-300/50 text-xs uppercase tracking-wider">Tier</p>
           <p className="font-bold text-sm" style={{ color: data.tier.color }}>
             {data.tier.name}
+            {data.tierOverride && (
+              <span className="ml-1.5 text-[10px] font-bold uppercase tracking-wide text-gold-400/80">
+                (manually set)
+              </span>
+            )}
           </p>
         </div>
         <div className="ml-auto text-right">
           <p className="text-pearl-300/50 text-xs uppercase tracking-wider">Lifetime deposits</p>
           <p className="text-pearl-100 font-bold text-sm">{formatCents(data.lifetimeDepositsCents)}</p>
         </div>
+      </div>
+
+      <div className="flex items-center gap-2">
+        <label className="text-pearl-300/60 text-xs shrink-0">Override tier</label>
+        <select
+          value={data.tierOverride ?? ''}
+          onChange={(event) => updateTierOverride(event.target.value)}
+          disabled={isSavingTier}
+          className="flex-1 rounded-lg bg-navy-900 border border-gold-600/25 px-2 py-1.5 text-xs text-pearl-100 focus:border-gold-400 focus:outline-none disabled:opacity-60"
+        >
+          <option value="">Auto (from deposits)</option>
+          {TIER_NAMES.map((name) => (
+            <option key={name} value={name}>
+              {name}
+            </option>
+          ))}
+        </select>
       </div>
 
       <div>
