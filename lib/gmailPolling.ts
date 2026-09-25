@@ -3,7 +3,14 @@
 // don't have a working inbound-email-to-webhook provider (Twilio/SendGrid
 // closed the account on signup, likely over the gambling-adjacent
 // vertical). Uses a long-lived refresh token for one Gmail account,
-// obtained once via scripts/gmail-oauth-setup.mjs — read-only scope only.
+// obtained once via scripts/gmail-oauth-setup.mjs.
+//
+// Strictly read-only (gmail.readonly scope) and deliberately never writes
+// anything back to the mailbox — no mark-as-read, no labels. That inbox has
+// a separate, independent poller also reading it for other purposes, and
+// this one must never mutate shared mailbox state (read/unread, labels)
+// that the other system might also depend on. Our own database is the only
+// place "already processed" is tracked (see emailDepositProcessor.ts).
 
 type GmailMessagePart = {
   mimeType?: string;
@@ -47,17 +54,21 @@ export async function getAccessToken(): Promise<string> {
 }
 
 /**
- * IDs of unread messages that look like they could be a Venmo/Zelle deposit
+ * IDs of recent messages that look like they could be a Venmo/Zelle deposit
  * notification. Scoped tightly on purpose: the account also gets plenty of
  * OTHER Zelle mail from this same sender (outgoing payouts, payment
- * requests, "Action Required" reminders) that we should never touch, since
- * marking those read would hide something the account owner still needs to
- * act on. subject:"sent you" / subject:"paid you" excludes all of that —
+ * requests, "Action Required" reminders) that we should never mistake for a
+ * deposit. subject:"sent you" / subject:"paid you" excludes all of that —
  * only a received-payment notification uses that exact phrasing.
+ *
+ * Deliberately NOT filtered to is:unread and never mutates anything in the
+ * mailbox (see the module comment) — this inbox has a separate, independent
+ * poller reading the same mail, and this one must never affect what that
+ * one sees. Re-seeing an already-handled message every poll is fine; our
+ * own database (email_message_id) is what prevents double-processing it.
  */
 export async function listCandidateMessageIds(accessToken: string): Promise<string[]> {
-  const query =
-    '((from:zelle.discover.com subject:"sent you") OR (from:venmo.com subject:"paid you")) is:unread newer_than:2d';
+  const query = '((from:zelle.discover.com subject:"sent you") OR (from:venmo.com subject:"paid you")) newer_than:2d';
   const url = `https://gmail.googleapis.com/gmail/v1/users/me/messages?q=${encodeURIComponent(query)}&maxResults=25`;
   const response = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } });
   if (!response.ok) {
@@ -116,11 +127,3 @@ export async function getMessage(
   return { from, subject, text: '' };
 }
 
-export async function markAsRead(accessToken: string, id: string): Promise<void> {
-  const url = `https://gmail.googleapis.com/gmail/v1/users/me/messages/${id}/modify`;
-  await fetch(url, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ removeLabelIds: ['UNREAD'] }),
-  });
-}

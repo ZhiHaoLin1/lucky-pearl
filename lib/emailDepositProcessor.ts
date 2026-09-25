@@ -24,6 +24,12 @@ export type ProcessedEmailResult =
  * reached us (a forwarding webhook like Mailgun, or Gmail polling) — parses
  * it, checks for a duplicate, matches it to a customer, and either credits
  * the deposit or queues it for manual review.
+ *
+ * Dedup is entirely our own database (email_message_id), never anything on
+ * the mail provider's side (no read/unread flag, no label) — the Gmail
+ * poller in particular deliberately never mutates the mailbox, since
+ * another, independent system also reads this same inbox and must not be
+ * affected by ours.
  */
 export async function processDepositEmail({
   from,
@@ -41,10 +47,25 @@ export async function processDepositEmail({
     return { status: 'ignored' };
   }
 
+  // Deterministic either way, so re-seeing the same email (which will
+  // happen for an 'unparseable' one, since nothing marks it as handled)
+  // dedupes cleanly instead of queuing a fresh copy every poll.
+  const messageId =
+    parsed.status === 'unparseable'
+      ? `unparseable-${Buffer.from(from + subject).toString('base64').slice(0, 60)}`
+      : parsed.messageId;
+
+  const [existingDeposit, existingUnmatched] = await Promise.all([
+    db.execute({ sql: 'SELECT id FROM deposits WHERE email_message_id = ?', args: [messageId] }),
+    db.execute({ sql: 'SELECT id FROM email_unmatched_payments WHERE email_message_id = ?', args: [messageId] }),
+  ]);
+  if (existingDeposit.rows.length > 0 || existingUnmatched.rows.length > 0) {
+    return { status: 'duplicate' };
+  }
+
   const queueForReview = async (
     reason: 'unparseable' | 'no_match' | 'ambiguous',
     source: 'venmo' | 'zelle',
-    messageId: string,
     amountCents: number | null,
     parsedName: string | null
   ) => {
@@ -65,19 +86,8 @@ export async function processDepositEmail({
   };
 
   if (parsed.status === 'unparseable') {
-    // Looked like a real notification but a required field was missing —
-    // dedup by subject+from since there's no reliable id to key off of.
-    const fallbackId = `unparseable-${Buffer.from(from + subject).toString('base64').slice(0, 40)}-${Date.now()}`;
-    await queueForReview('unparseable', parsed.source, fallbackId, null, null);
+    await queueForReview('unparseable', parsed.source, null, null);
     return { status: 'queued', reason: 'unparseable' };
-  }
-
-  const [existingDeposit, existingUnmatched] = await Promise.all([
-    db.execute({ sql: 'SELECT id FROM deposits WHERE email_message_id = ?', args: [parsed.messageId] }),
-    db.execute({ sql: 'SELECT id FROM email_unmatched_payments WHERE email_message_id = ?', args: [parsed.messageId] }),
-  ]);
-  if (existingDeposit.rows.length > 0 || existingUnmatched.rows.length > 0) {
-    return { status: 'duplicate' };
   }
 
   const usersResult = await db.execute("SELECT id, full_name, username FROM users WHERE role != 'admin'");
@@ -87,7 +97,7 @@ export async function processDepositEmail({
   );
 
   if (match.status !== 'matched') {
-    await queueForReview(match.status, parsed.source, parsed.messageId, parsed.amountCents, parsed.name);
+    await queueForReview(match.status, parsed.source, parsed.amountCents, parsed.name);
     return { status: 'queued', reason: match.status };
   }
 
@@ -95,7 +105,7 @@ export async function processDepositEmail({
   await db.execute({
     sql: `INSERT INTO deposits (id, user_id, amount_cents, method, email_message_id)
           VALUES (?, ?, ?, ?, ?)`,
-    args: [randomUUID(), userId, parsed.amountCents, parsed.source, parsed.messageId],
+    args: [randomUUID(), userId, parsed.amountCents, parsed.source, messageId],
   });
 
   return { status: 'matched', userId };

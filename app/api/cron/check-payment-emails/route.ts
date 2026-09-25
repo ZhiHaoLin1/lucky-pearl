@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getAccessToken, listCandidateMessageIds, getMessage, markAsRead } from '@/lib/gmailPolling';
+import { getAccessToken, listCandidateMessageIds, getMessage } from '@/lib/gmailPolling';
 import { processDepositEmail } from '@/lib/emailDepositProcessor';
 
 export const dynamic = 'force-dynamic';
@@ -20,13 +20,14 @@ export async function GET(request: Request) {
   const accessToken = await getAccessToken();
   const messageIds = await listCandidateMessageIds(accessToken);
 
+  // Nothing in this loop writes back to Gmail — see lib/gmailPolling.ts for
+  // why (a separate, independent poller also reads this inbox). Every
+  // matching message gets re-fetched every poll; our own database
+  // (email_message_id) is what keeps that from double-processing anything.
   const results: Array<{ id: string; status: string }> = [];
   for (const id of messageIds) {
     const { from, subject, text } = await getMessage(accessToken, id);
     const result = await processDepositEmail({ from, subject, text });
-    // Mark read regardless of outcome — our own email_message_id dedup is
-    // the real safety net, this just keeps the inbox (and next poll) tidy.
-    await markAsRead(accessToken, id);
     results.push({ id, status: result.status });
   }
 
