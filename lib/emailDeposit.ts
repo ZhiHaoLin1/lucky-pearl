@@ -60,8 +60,11 @@ function parseZelleDiscoverEmail(
 
 const VENMO_SUBJECT_RE = /^(.+?) paid you \$([\d,]+\.\d{2})\s*$/i;
 const VENMO_BODY_MARKER_RE = /Money credited to your Venmo account/i;
-const VENMO_TRANSACTION_RE = /Transaction ID\s*[\r\n]+\s*(\d+)/i;
-const VENMO_SENT_TO_RE = /Sent to\s*[\r\n]+\s*@?([\w.\-]+)/i;
+// Whitespace between a label and its value is unpredictable once HTML is
+// stripped (Venmo's template sometimes has none at all, e.g. "Transaction
+// ID4693816...") — \s* rather than \s+ so either is fine.
+const VENMO_TRANSACTION_RE = /Transaction ID\s*(\d+)/i;
+const VENMO_SENT_TO_RE = /Sent to\s*@?([\w.\-]+)/i;
 
 function parseVenmoEmail(subject: string, text: string): ParsedDepositEmail | UnparseableDepositEmail | null {
   const subjectMatch = subject.match(VENMO_SUBJECT_RE);

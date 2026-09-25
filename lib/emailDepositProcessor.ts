@@ -35,10 +35,21 @@ export async function processDepositEmail({
   from,
   subject,
   text,
+  providerMessageId,
 }: {
   from: string;
   subject: string;
   text: string;
+  /**
+   * The mail provider's own unique id for this message (e.g. Gmail's),
+   * when we have one. Preferred over anything parsed out of the email's
+   * own body: a bank/payment-provider "reference number" is only as
+   * unique as that provider's own numbering scheme — Discover's turned
+   * out to get reused for a genuinely different transaction — so trusting
+   * it alone as the dedup key risks a later real deposit silently looking
+   * like a duplicate of an old one and never getting credited.
+   */
+  providerMessageId?: string;
 }): Promise<ProcessedEmailResult> {
   await ensureSchema();
 
@@ -50,10 +61,11 @@ export async function processDepositEmail({
   // Deterministic either way, so re-seeing the same email (which will
   // happen for an 'unparseable' one, since nothing marks it as handled)
   // dedupes cleanly instead of queuing a fresh copy every poll.
-  const messageId =
-    parsed.status === 'unparseable'
-      ? `unparseable-${Buffer.from(from + subject).toString('base64').slice(0, 60)}`
-      : parsed.messageId;
+  const messageId = providerMessageId
+    ? `${parsed.source}-src-${providerMessageId}`
+    : parsed.status === 'unparseable'
+    ? `unparseable-${Buffer.from(from + subject).toString('base64').slice(0, 60)}`
+    : parsed.messageId;
 
   const [existingDeposit, existingUnmatched] = await Promise.all([
     db.execute({ sql: 'SELECT id FROM deposits WHERE email_message_id = ?', args: [messageId] }),

@@ -27,7 +27,7 @@ export async function GET(request: Request) {
   const results: Array<{ id: string; status: string }> = [];
   for (const id of messageIds) {
     const { from, subject, text } = await getMessage(accessToken, id);
-    const result = await processDepositEmail({ from, subject, text });
+    const result = await processDepositEmail({ from, subject, text, providerMessageId: id });
     results.push({ id, status: result.status });
   }
 

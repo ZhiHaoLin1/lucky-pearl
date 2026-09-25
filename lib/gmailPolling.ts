@@ -94,11 +94,18 @@ function decodeBase64Url(data: string): string {
 
 function stripHtml(html: string): string {
   return html
+    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
     .replace(/<br\s*\/?>/gi, '\n')
-    .replace(/<\/(p|div|tr|li)>/gi, '\n')
-    .replace(/<[^>]+>/g, '')
+    .replace(/<\/(p|div|tr|li|td|th|table)>/gi, '\n')
+    .replace(/<[^>]+>/g, ' ')
     .replace(/&nbsp;/g, ' ')
-    .replace(/&amp;/g, '&');
+    .replace(/&amp;/g, '&')
+    .replace(/&#39;/g, "'")
+    .replace(/&quot;/g, '"')
+    .replace(/[ \t]+/g, ' ')
+    .replace(/[ \t]*\n[ \t]*/g, '\n')
+    .trim();
 }
 
 export async function getMessage(
