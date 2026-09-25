@@ -46,9 +46,18 @@ export async function getAccessToken(): Promise<string> {
   return data.access_token;
 }
 
-/** IDs of unread messages that look like they could be a Venmo/Zelle notification. */
+/**
+ * IDs of unread messages that look like they could be a Venmo/Zelle deposit
+ * notification. Scoped tightly on purpose: the account also gets plenty of
+ * OTHER Zelle mail from this same sender (outgoing payouts, payment
+ * requests, "Action Required" reminders) that we should never touch, since
+ * marking those read would hide something the account owner still needs to
+ * act on. subject:"sent you" / subject:"paid you" excludes all of that —
+ * only a received-payment notification uses that exact phrasing.
+ */
 export async function listCandidateMessageIds(accessToken: string): Promise<string[]> {
-  const query = '(from:venmo.com OR from:discover.com) is:unread newer_than:2d';
+  const query =
+    '((from:zelle.discover.com subject:"sent you") OR (from:venmo.com subject:"paid you")) is:unread newer_than:2d';
   const url = `https://gmail.googleapis.com/gmail/v1/users/me/messages?q=${encodeURIComponent(query)}&maxResults=25`;
   const response = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } });
   if (!response.ok) {
