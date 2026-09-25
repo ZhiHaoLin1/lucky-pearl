@@ -14,7 +14,8 @@ export const VIP_TIERS: VipTier[] = [
     icon: '🪬',
     color: '#b5a285',
     minDepositsCents: 0,
-    dailyLimitCents: 10_000,
+    // Matches the $110 Cash App minimum so every tier can withdraw via Cash App.
+    dailyLimitCents: 11_000,
     features: ['Entry tier for every member', 'Daily bonus on all games'],
   },
   {

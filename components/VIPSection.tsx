@@ -28,7 +28,7 @@ export default function VIPSection() {
             The VIP Circle
           </h2>
           <p className="text-pearl-200/75 text-lg sm:text-xl max-w-2xl mx-auto leading-relaxed">
-            Your tier is based on <strong className="text-pearl-100">total lifetime deposits</strong> with us. The more you have deposited over time, the higher your <strong className="text-pearl-100">daily withdrawal</strong> limit — from $100 up to $500 per day.
+            Your tier is based on <strong className="text-pearl-100">total lifetime deposits</strong> with us. The more you have deposited over time, the higher your <strong className="text-pearl-100">daily withdrawal</strong> limit — from {tiers[0].withdrawalLimit.replace('/day', '')} up to {tiers[tiers.length - 1].withdrawalLimit.replace('/day', '')} per day.
           </p>
         </div>
 
