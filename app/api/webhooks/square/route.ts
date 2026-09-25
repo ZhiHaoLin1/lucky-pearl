@@ -10,6 +10,7 @@ type SquarePayment = {
   status: string;
   note?: string;
   amount_money?: { amount: number };
+  location_id?: string;
 };
 
 async function notifyDiscord(lines: string[]) {
@@ -42,6 +43,18 @@ export async function POST(request: Request) {
   const payment = event.data?.object?.payment;
   if (!payment || payment.status !== 'COMPLETED') {
     return NextResponse.json({ ok: true, skipped: true });
+  }
+
+  // The Square subscription sends events from every location on the
+  // account; this narrows it to the location(s) actually meant to be
+  // tracked. Unset means no filter (track everything), for backward
+  // compatibility if this ever gets cleared.
+  const trackedLocationIds = (process.env.SQUARE_TRACKED_LOCATION_IDS ?? '')
+    .split(',')
+    .map((id) => id.trim())
+    .filter(Boolean);
+  if (trackedLocationIds.length > 0 && !trackedLocationIds.includes(String(payment.location_id ?? ''))) {
+    return NextResponse.json({ ok: true, skipped: true, reason: 'untracked_location' });
   }
 
   await ensureSchema();
