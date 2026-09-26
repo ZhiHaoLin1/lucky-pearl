@@ -38,6 +38,22 @@ function parseAmountToCents(amountStr: string): number | null {
 const ZELLE_SUBJECT_RE = /^Notification - (.+?) sent you \$([\d,]+\.\d{2})\.?\s*$/i;
 const ZELLE_BODY_MARKER_RE = /will be automatically deposited to your account/i;
 const ZELLE_REFERENCE_RE = /ReferenceID\s*\((\d+)\)/i;
+// The block between the main sentence and the disclaimer is either a
+// personal message the sender typed (e.g. their real name, when their
+// Zelle/bank account is registered under a different name — a business
+// name, a nickname) or, if they didn't add one, Discover just repeats the
+// account name there next to an "Access Account" link. Only the first case
+// is a real memo worth preferring over the account name.
+const ZELLE_MEMO_RE = /will be automatically deposited to your account\.\s*([\s\S]*?)\s*Discover is not responsible/i;
+
+function extractZelleMemo(text: string, accountName: string): string | null {
+  const match = text.match(ZELLE_MEMO_RE);
+  if (!match) return null;
+  const memo = match[1].replace(/Access Account/gi, '').replace(/\s+/g, ' ').trim();
+  if (!memo) return null;
+  if (memo.toLowerCase() === accountName.toLowerCase()) return null;
+  return memo;
+}
 
 function parseZelleDiscoverEmail(
   subject: string,
@@ -52,8 +68,14 @@ function parseZelleDiscoverEmail(
   if (!referenceMatch) return { status: 'unparseable', source: 'zelle' };
 
   const amountCents = parseAmountToCents(subjectMatch[2]);
-  const name = subjectMatch[1].trim();
-  if (!amountCents || !name) return { status: 'unparseable', source: 'zelle' };
+  const accountName = subjectMatch[1].trim();
+  if (!amountCents || !accountName) return { status: 'unparseable', source: 'zelle' };
+
+  // Prefer a personal-message memo over the Zelle account's own display
+  // name — see HowToDepositCard.tsx, which asks customers to put their
+  // real name in the note, since their bank/Zelle account may be
+  // registered under a business name or nickname instead.
+  const name = extractZelleMemo(text, accountName) ?? accountName;
 
   return { status: 'parsed', source: 'zelle', name, amountCents, messageId: `zelle-${referenceMatch[1]}` };
 }
@@ -65,6 +87,22 @@ const VENMO_BODY_MARKER_RE = /Money credited to your Venmo account/i;
 // ID4693816...") — \s* rather than \s+ so either is fine.
 const VENMO_TRANSACTION_RE = /Transaction ID\s*(\d+)/i;
 const VENMO_SENT_TO_RE = /Sent to\s*@?([\w.\-]+)/i;
+// Venmo's "For {caption}" note, which appears once near the top of the
+// email, before "See transaction"/"Money credited...". The footer also
+// has an unrelated "For any issues, including..." disclaimer sentence, so
+// the search is deliberately restricted to before that cutoff to avoid
+// matching it instead.
+const VENMO_MEMO_CUTOFF_RE = /See transaction|Money credited to your Venmo account/i;
+const VENMO_MEMO_RE = /\bFor\s+(.+?)\s*$/i;
+
+function extractVenmoMemo(text: string): string | null {
+  const cutoffIndex = text.search(VENMO_MEMO_CUTOFF_RE);
+  const searchArea = cutoffIndex >= 0 ? text.slice(0, cutoffIndex) : text;
+  const match = searchArea.match(VENMO_MEMO_RE);
+  if (!match) return null;
+  const memo = match[1].replace(/\s+/g, ' ').trim();
+  return memo || null;
+}
 
 function parseVenmoEmail(subject: string, text: string): ParsedDepositEmail | UnparseableDepositEmail | null {
   const subjectMatch = subject.match(VENMO_SUBJECT_RE);
@@ -81,8 +119,12 @@ function parseVenmoEmail(subject: string, text: string): ParsedDepositEmail | Un
   if (!transactionMatch) return { status: 'unparseable', source: 'venmo' };
 
   const amountCents = parseAmountToCents(subjectMatch[2]);
-  const name = subjectMatch[1].trim();
-  if (!amountCents || !name) return { status: 'unparseable', source: 'venmo' };
+  const accountName = subjectMatch[1].trim();
+  if (!amountCents || !accountName) return { status: 'unparseable', source: 'venmo' };
+
+  // Prefer the "For {caption}" note over the Venmo account's own display
+  // name, same reasoning as the Zelle side — see HowToDepositCard.tsx.
+  const name = extractVenmoMemo(text) ?? accountName;
 
   return { status: 'parsed', source: 'venmo', name, amountCents, messageId: `venmo-${transactionMatch[1]}` };
 }
