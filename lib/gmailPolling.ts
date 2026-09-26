@@ -50,6 +50,7 @@ export async function getAccessToken(): Promise<string> {
       refresh_token: refreshToken,
       grant_type: 'refresh_token',
     }),
+    cache: 'no-store',
   });
   if (!response.ok) {
     throw new Error(`Failed to refresh Gmail access token: ${response.status} ${await response.text()}`);
@@ -74,7 +75,10 @@ export async function getAccessToken(): Promise<string> {
 export async function listCandidateMessageIds(accessToken: string): Promise<string[]> {
   const query = '((from:zelle.discover.com subject:"sent you") OR (from:venmo.com subject:"paid you")) newer_than:2d';
   const url = `https://gmail.googleapis.com/gmail/v1/users/me/messages?q=${encodeURIComponent(query)}&maxResults=25`;
-  const response = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } });
+  // Explicit no-store: Next.js patches fetch() to cache GET requests by
+  // default in some contexts, which would silently serve a stale "no new
+  // mail" result from an earlier poll instead of actually re-querying Gmail.
+  const response = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` }, cache: 'no-store' });
   if (!response.ok) {
     throw new Error(`Failed to list Gmail messages: ${response.status} ${await response.text()}`);
   }
@@ -117,7 +121,7 @@ export async function getMessage(
   id: string
 ): Promise<{ from: string; subject: string; text: string }> {
   const url = `https://gmail.googleapis.com/gmail/v1/users/me/messages/${id}?format=full`;
-  const response = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } });
+  const response = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` }, cache: 'no-store' });
   if (!response.ok) {
     throw new Error(`Failed to fetch Gmail message ${id}: ${response.status} ${await response.text()}`);
   }
