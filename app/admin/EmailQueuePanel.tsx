@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { AlertTriangle, Check, X } from 'lucide-react';
+import { AlertTriangle, Check, RefreshCw, X } from 'lucide-react';
 import type { AdminCustomer } from './AdminDashboardClient';
 
 type PendingPayment = {
@@ -53,9 +53,10 @@ export default function EmailQueuePanel({
   const [manualAmount, setManualAmount] = useState<Record<string, string>>({});
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
-  const load = () => {
-    setLoading(true);
+  const load = (opts?: { silent?: boolean }) => {
+    if (!opts?.silent) setLoading(true);
     return fetch('/api/admin/email-unmatched')
       .then((res) => res.json())
       .then((data) => {
@@ -71,6 +72,12 @@ export default function EmailQueuePanel({
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await load({ silent: true });
+    setRefreshing(false);
+  };
 
   const resolve = async (id: string, action: 'assign' | 'dismiss', userId?: string, amountDollars?: string) => {
     setError(null);
@@ -109,13 +116,36 @@ export default function EmailQueuePanel({
   if (pending.length === 0) {
     return (
       <div className="rounded-2xl border border-gold-600/25 bg-navy-800/60 p-8 text-center text-pearl-300/70">
-        No payment emails waiting on a match. Everything's reconciled.
+        <p className="mb-4">No payment emails waiting on a match. Everything's reconciled.</p>
+        <button
+          type="button"
+          onClick={handleRefresh}
+          disabled={refreshing}
+          className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-bold bg-navy-900/60 text-pearl-300/70 border border-gold-600/25 hover:text-pearl-100 hover:border-gold-400/40 disabled:opacity-60"
+        >
+          <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
+          {refreshing ? 'Refreshing…' : 'Refresh'}
+        </button>
       </div>
     );
   }
 
   return (
     <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <p className="text-pearl-300/60 text-sm">
+          {pending.length} payment email{pending.length === 1 ? '' : 's'} waiting on a match
+        </p>
+        <button
+          type="button"
+          onClick={handleRefresh}
+          disabled={refreshing}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-navy-800/60 text-pearl-300/70 border border-gold-600/25 hover:text-pearl-100 hover:border-gold-400/40 disabled:opacity-60"
+        >
+          <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
+          {refreshing ? 'Refreshing…' : 'Refresh'}
+        </button>
+      </div>
       {error && <p className="text-sm text-red-300">{error}</p>}
       {pending.map((payment) => (
         <div key={payment.id} className="rounded-2xl border border-gold-600/25 bg-navy-800/60 p-5">
