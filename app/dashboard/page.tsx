@@ -232,7 +232,7 @@ export default async function DashboardPage() {
               </div>
             </div>
           }
-          vip={<VIPSection />}
+          vip={<VIPSection currentTierName={financeSummary.tier.name} />}
           withdrawProps={{
             tier: financeSummary.tier,
             nextTier,

@@ -5,7 +5,6 @@ export type VipTier = {
   minDepositsCents: number;
   dailyLimitCents: number;
   features: string[];
-  highlighted?: boolean;
 };
 
 export const VIP_TIERS: VipTier[] = [
@@ -33,7 +32,6 @@ export const VIP_TIERS: VipTier[] = [
     minDepositsCents: 1_000_000,
     dailyLimitCents: 30_000,
     features: ['Card & Apple Pay deposits unlocked', 'Major holiday bonus', 'Extended cashout hours starting 9AM'],
-    highlighted: true,
   },
   {
     name: 'Dragon',
