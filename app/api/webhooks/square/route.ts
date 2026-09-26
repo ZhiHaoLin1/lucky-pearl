@@ -14,7 +14,7 @@ type SquarePayment = {
 };
 
 async function notifyDiscord(lines: string[]) {
-  const webhookUrl = process.env.DISCORD_WITHDRAWAL_WEBHOOK_URL || process.env.DISCORD_WEBHOOK_URL;
+  const webhookUrl = process.env.DISCORD_MANUAL_MATCH_WEBHOOK_URL || process.env.DISCORD_WEBHOOK_URL;
   if (!webhookUrl) return;
   fetch(webhookUrl, {
     method: 'POST',
