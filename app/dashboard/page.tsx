@@ -127,91 +127,114 @@ export default async function DashboardPage() {
         <DashboardTabs
           overview={
             <div className="space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <div className="lg:col-span-1 rounded-2xl border border-gold-600/25 bg-navy-800/60 p-6">
+              <div className="rounded-2xl border border-gold-600/25 bg-navy-800/60 p-6">
                 <h2
                   className="text-lg font-bold text-white mb-5"
                   style={{ fontFamily: "'Cinzel', serif" }}
                 >
                   Profile
                 </h2>
-            <div className="space-y-4 text-sm">
-              <div className="flex items-start gap-3">
-                <Mail className="w-4 h-4 mt-0.5 text-gold-400 shrink-0" />
-                <div>
-                  <p className="text-pearl-300/50 text-xs uppercase tracking-wider">Email</p>
-                  <p className="text-pearl-100 break-all">{user.email}</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <Phone className="w-4 h-4 mt-0.5 text-gold-400 shrink-0" />
-                <div>
-                  <p className="text-pearl-300/50 text-xs uppercase tracking-wider">Phone</p>
-                  <p className="text-pearl-100">{user.phone}</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <CalendarDays className="w-4 h-4 mt-0.5 text-gold-400 shrink-0" />
-                <div>
-                  <p className="text-pearl-300/50 text-xs uppercase tracking-wider">Member since</p>
-                  <p className="text-pearl-100">{memberSince}</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="lg:col-span-2 rounded-2xl border border-gold-600/25 bg-navy-800/60 p-6">
-            <h2
-              className="text-lg font-bold text-white mb-5"
-              style={{ fontFamily: "'Cinzel', serif" }}
-            >
-              Your Games
-            </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {games.map((game) => (
-                <div
-                  key={game.slug}
-                  className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-navy-900/60 px-4 py-3.5"
-                >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <span className="text-2xl shrink-0">{game.emoji}</span>
-                    <div className="min-w-0">
-                      <Link
-                        href={`/games/${game.slug}`}
-                        className="text-pearl-100 font-semibold text-sm hover:text-gold-400 transition-colors truncate block"
-                      >
-                        {game.name}
-                      </Link>
-                      {user.preferredGame === game.name && (
-                        <span className="text-[10px] uppercase tracking-wider" style={{ color: game.accentColor }}>
-                          Your favorite
-                        </span>
-                      )}
+                <div className="space-y-4 text-sm">
+                  <div className="flex items-start gap-3">
+                    <Mail className="w-4 h-4 mt-0.5 text-gold-400 shrink-0" />
+                    <div>
+                      <p className="text-pearl-300/50 text-xs uppercase tracking-wider">Email</p>
+                      <p className="text-pearl-100 break-all">{user.email}</p>
                     </div>
                   </div>
-                  <a
-                    href={gamePlayUrls[game.slug]}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="shrink-0 px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all duration-300 btn-press"
-                    style={{
-                      background: `${game.accentColor}20`,
-                      color: game.accentColor,
-                      border: `1px solid ${game.accentColor}60`,
-                    }}
-                  >
-                    Play
-                  </a>
+                  <div className="flex items-start gap-3">
+                    <Phone className="w-4 h-4 mt-0.5 text-gold-400 shrink-0" />
+                    <div>
+                      <p className="text-pearl-300/50 text-xs uppercase tracking-wider">Phone</p>
+                      <p className="text-pearl-100">{user.phone}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <CalendarDays className="w-4 h-4 mt-0.5 text-gold-400 shrink-0" />
+                    <div>
+                      <p className="text-pearl-300/50 text-xs uppercase tracking-wider">Member since</p>
+                      <p className="text-pearl-100">{memberSince}</p>
+                    </div>
+                  </div>
                 </div>
-              ))}
-            </div>
+              </div>
+
+              <HowToDepositCard isGoldOrAbove={isGoldOrAbove} />
+
+              <InboxClient initialMessages={messages} />
+
+              <div className="rounded-2xl border border-gold-600/25 bg-navy-800/40 p-6 text-center">
+                <p className="text-pearl-300/70 text-sm mb-2">
+                  Need a game account, a redeem, or help with anything else?
+                </p>
+                <p className="text-pearl-300/70 text-sm">
+                  <a
+                    href="sms:+14077968311"
+                    className="text-gold-400 hover:text-gold-300 font-semibold underline underline-offset-2"
+                  >
+                    Text 407-796-8311
+                  </a>{' '}
+                  <span className="text-pearl-300/30">·</span>{' '}
+                  <a
+                    href="tel:+14077968311"
+                    className="text-pearl-300/60 hover:text-pearl-100 font-semibold underline underline-offset-2"
+                  >
+                    Call
+                  </a>{' '}
+                  (please text first), or send a message using the Inbox above.
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-gold-600/25 bg-navy-800/60 p-6">
+                <h2
+                  className="text-lg font-bold text-white mb-5"
+                  style={{ fontFamily: "'Cinzel', serif" }}
+                >
+                  Your Games
+                </h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {games.map((game) => (
+                    <div
+                      key={game.slug}
+                      className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-navy-900/60 px-4 py-3.5"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <span className="text-2xl shrink-0">{game.emoji}</span>
+                        <div className="min-w-0">
+                          <Link
+                            href={`/games/${game.slug}`}
+                            className="text-pearl-100 font-semibold text-sm hover:text-gold-400 transition-colors truncate block"
+                          >
+                            {game.name}
+                          </Link>
+                          {user.preferredGame === game.name && (
+                            <span className="text-[10px] uppercase tracking-wider" style={{ color: game.accentColor }}>
+                              Your favorite
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <a
+                        href={gamePlayUrls[game.slug]}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="shrink-0 px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all duration-300 btn-press"
+                        style={{
+                          background: `${game.accentColor}20`,
+                          color: game.accentColor,
+                          border: `1px solid ${game.accentColor}60`,
+                        }}
+                      >
+                        Play
+                      </a>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
-            <HowToDepositCard isGoldOrAbove={isGoldOrAbove} />
-            <DailyLeaderboard />
-            <VIPSection />
-            </div>
           }
+          jackpots={<DailyLeaderboard />}
+          vip={<VIPSection />}
           withdrawProps={{
             tier: financeSummary.tier,
             nextTier,
@@ -222,30 +245,6 @@ export default async function DashboardPage() {
           }}
           initialDeposits={initialDeposits}
         />
-
-        <InboxClient initialMessages={messages} />
-
-        <div className="rounded-2xl border border-gold-600/25 bg-navy-800/40 p-6 text-center">
-          <p className="text-pearl-300/70 text-sm mb-2">
-            Need a game account, a redeem, or help with anything else?
-          </p>
-          <p className="text-pearl-300/70 text-sm">
-            <a
-              href="sms:+14077968311"
-              className="text-gold-400 hover:text-gold-300 font-semibold underline underline-offset-2"
-            >
-              Text 407-796-8311
-            </a>{' '}
-            <span className="text-pearl-300/30">·</span>{' '}
-            <a
-              href="tel:+14077968311"
-              className="text-pearl-300/60 hover:text-pearl-100 font-semibold underline underline-offset-2"
-            >
-              Call
-            </a>{' '}
-            (please text first), or send a message using the Inbox above.
-          </p>
-        </div>
       </div>
     </main>
   );

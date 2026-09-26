@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import PlayButton from './PlayButton';
 
 const JACKPOT_START = 56_234;
 const JACKPOT_MAX = 99_999;
@@ -195,14 +196,13 @@ export default function Hero() {
         <div
           className={`flex flex-col sm:flex-row gap-4 justify-center transition-all duration-1000 delay-700 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
         >
-          <a
-            href="#games"
+          <PlayButton
             className="group relative px-10 py-4 text-base tracking-wide text-navy-900 font-bold overflow-hidden rounded-lg btn-press"
             style={{ background: 'linear-gradient(135deg, #d4af37 0%, #f5d882 50%, #c99a14 100%)' }}
           >
             <span className="relative z-10">Play Now</span>
             <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
-          </a>
+          </PlayButton>
           <a
             href="#payments"
             className="px-10 py-4 text-base tracking-wide text-gold-400 border border-gold-600/40 rounded-lg hover:border-gold-400 hover:bg-gold-DEFAULT/5 transition-all duration-300 btn-press font-semibold"

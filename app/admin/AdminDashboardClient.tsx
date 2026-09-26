@@ -420,8 +420,8 @@ export default function AdminDashboardClient({
             <p className="text-pearl-300/70 text-sm">Select a customer to view details.</p>
           ) : (
             <>
-              <div className="mb-5 pb-5 border-b border-white/10 flex items-start justify-between gap-3">
-                <div>
+              <div className="mb-5 pb-5 border-b border-white/10 flex flex-wrap items-start justify-between gap-3">
+                <div className="min-w-0">
                   <h2 className="text-lg font-bold text-white mb-1">{activeCustomer.fullName}</h2>
                   <div className="mb-3">
                     {isEditingUsername ? (
@@ -466,12 +466,12 @@ export default function AdminDashboardClient({
                     {usernameError && <p className="text-red-300 text-xs mt-1">{usernameError}</p>}
                   </div>
                   <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
-                    <span className="flex items-center gap-2 text-pearl-300/80">
-                      <Mail className="w-4 h-4 text-gold-400" />
+                    <span className="flex items-center gap-2 min-w-0 text-pearl-300/80 break-all">
+                      <Mail className="w-4 h-4 text-gold-400 shrink-0" />
                       {activeCustomer.email}
                     </span>
                     <span className="flex items-center gap-2 text-pearl-300/80">
-                      <Phone className="w-4 h-4 text-gold-400" />
+                      <Phone className="w-4 h-4 text-gold-400 shrink-0" />
                       {activeCustomer.phone}
                     </span>
                     {activeCustomer.preferredGame && (
@@ -541,7 +541,7 @@ export default function AdminDashboardClient({
                             <button
                               type="button"
                               onClick={() => handleDeleteMessage(message.id)}
-                              className="shrink-0 text-pearl-300/40 hover:text-red-300 opacity-0 group-hover:opacity-100 transition-opacity"
+                              className="shrink-0 text-pearl-300/40 hover:text-red-300 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
                               aria-label="Delete message"
                             >
                               <Trash2 className="w-4 h-4" />
@@ -552,19 +552,19 @@ export default function AdminDashboardClient({
                     )}
                   </div>
 
-                  <form onSubmit={handleSend} className="flex gap-3">
+                  <form onSubmit={handleSend} className="flex flex-col sm:flex-row gap-3">
                     <textarea
                       value={messageBody}
                       onChange={(event) => setMessageBody(event.target.value)}
                       placeholder="Write a message…"
                       rows={2}
                       required
-                      className="flex-1 rounded-xl bg-navy-900 border border-gold-600/25 px-4 py-3 text-sm text-pearl-100 focus:border-gold-400 focus:outline-none focus:ring-2 focus:ring-gold-400/30 resize-none"
+                      className="flex-1 min-w-0 rounded-xl bg-navy-900 border border-gold-600/25 px-4 py-3 text-sm text-pearl-100 focus:border-gold-400 focus:outline-none focus:ring-2 focus:ring-gold-400/30 resize-none"
                     />
                     <button
                       type="submit"
                       disabled={isSending}
-                      className="shrink-0 px-5 rounded-xl bg-gold-gradient text-navy-900 font-bold flex items-center gap-2 disabled:opacity-60"
+                      className="shrink-0 w-full sm:w-auto px-5 py-3 sm:py-0 rounded-xl bg-gold-gradient text-navy-900 font-bold flex items-center justify-center gap-2 disabled:opacity-60"
                     >
                       <Send className="w-4 h-4" />
                       {isSending ? 'Sending…' : 'Send'}
