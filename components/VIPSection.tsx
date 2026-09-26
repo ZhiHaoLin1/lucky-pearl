@@ -11,16 +11,9 @@ const tiers = VIP_TIERS.map((tier) => ({
 
 export default function VIPSection() {
   return (
-    <section id="vip" className="py-20 sm:py-28 px-6 relative overflow-hidden">
-      <div
-        className="absolute inset-0 pointer-events-none"
-        style={{
-          background: `radial-gradient(ellipse at 50% 100%, rgba(17,31,56,0.9) 0%, #04060f 60%)`,
-        }}
-      />
-
-      <div className="max-w-6xl mx-auto relative z-10">
-        <div className="text-center mb-12 sm:mb-16">
+    <section id="vip" className="mb-6 relative overflow-hidden rounded-2xl border border-gold-600/25 bg-navy-800/60 p-6 sm:p-8">
+      <div className="relative z-10">
+        <div className="text-center mb-10">
           <p className="text-gold-500 text-sm font-semibold tracking-wide uppercase mb-3">
             Withdrawal limits by loyalty
           </p>

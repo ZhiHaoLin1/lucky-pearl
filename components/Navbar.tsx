@@ -11,8 +11,6 @@ const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? '';
 const navLinks = [
   { label: 'Games', href: '#games' },
   { label: 'Payments', href: '#payments' },
-  { label: 'Jackpots', href: '#leaderboard' },
-  { label: 'VIP Club', href: '#vip' },
   { label: 'Support', href: '#support' },
 ];
 
@@ -90,6 +88,14 @@ export default function Navbar() {
     };
     window.addEventListener('lp-open-join', onOpenJoin);
     return () => window.removeEventListener('lp-open-join', onOpenJoin);
+  }, []);
+
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('join') === '1') {
+      window.dispatchEvent(new CustomEvent('lp-open-join'));
+      router.replace('/', { scroll: false });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {

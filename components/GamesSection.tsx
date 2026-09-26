@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { gamePlayUrls } from '@/lib/gamePlayUrls';
+import PlayButton from './PlayButton';
 
 interface Game {
   slug: keyof typeof gamePlayUrls;
@@ -31,8 +32,7 @@ const games: Game[] = [
     name: 'Golden Dragon',
     subtitle: '黄金龙',
     tagline: 'Legend of the Dragon Emperor',
-    description:
-      'Enter the imperial palace of the Dragon Emperor. Ancient wilds breathe fire across cascading reels as the mythical beast\'s treasure unlocks massive multiplied jackpots.',
+    description: 'Cascading wilds and an emperor-sized jackpot.',
     rtp: '96.8%',
     minBet: '$0.25',
     maxBet: '$500',
@@ -53,8 +53,7 @@ const games: Game[] = [
     name: 'Magic City',
     subtitle: 'Neon Paradise',
     tagline: 'The City That Never Sleeps',
-    description:
-      'Neon signs flicker across a rain-drenched metropolis where every spin lights up the skyline. Urban wilds and cityscape bonuses make every night electric.',
+    description: 'Neon wilds and city-lit bonuses, every spin.',
     rtp: '95.5%',
     minBet: '$0.10',
     maxBet: '$250',
@@ -75,8 +74,7 @@ const games: Game[] = [
     name: 'River',
     subtitle: '福河',
     tagline: 'Where Riches Flow Eternal',
-    description:
-      'Follow the sacred river through jade valleys and ancient temples. Serene waters conceal immense fortunes — lotus wilds bloom into free spins cascading like rushing currents.',
+    description: 'Calm waters, steady wins, our best RTP.',
     rtp: '97.2%',
     minBet: '$0.20',
     maxBet: '$400',
@@ -97,8 +95,7 @@ const games: Game[] = [
     name: 'Fire Phoenix',
     subtitle: '火凤凰',
     tagline: 'Rise from the Ashes, Win the Blaze',
-    description:
-      'The immortal phoenix soars through columns of flame, reborn with every spin. Each respin ignites new wins as the mythical bird\'s resurrection triggers explosive jackpot multipliers.',
+    description: 'Our biggest jackpot and highest volatility.',
     rtp: '96.1%',
     minBet: '$0.50',
     maxBet: '$1,000',
@@ -119,8 +116,7 @@ const games: Game[] = [
     name: 'Ultra Thunder',
     subtitle: '雷神',
     tagline: 'Command the Storm, Claim the Lightning',
-    description:
-      'Storm clouds gather over an electrified sky arena where the Thunder God tests every challenger. Charged wilds strike down across the reels, chaining bolts of lightning into cascading multiplied wins.',
+    description: 'Chained lightning strikes for cascading wins.',
     rtp: '96.4%',
     minBet: '$0.20',
     maxBet: '$600',
@@ -141,8 +137,7 @@ const games: Game[] = [
     name: 'Dragon Fury',
     subtitle: '龙怒',
     tagline: "Unleash the Dragon's Wrath",
-    description:
-      'A raging dragon tears through a shattered sky, its fury igniting every reel it crosses. Volatile wild storms and a rage meter that builds with every spin unleash some of our biggest jackpot swings.',
+    description: 'A rage meter that builds toward huge swings.',
     rtp: '95.9%',
     minBet: '$0.25',
     maxBet: '$750',
@@ -187,7 +182,7 @@ export default function GamesSection() {
             className="text-gold-600 text-xs tracking-[0.5em] uppercase mb-4"
             style={{ fontFamily: "'Cinzel', serif" }}
           >
-            Featured Games
+            Our Games
           </p>
           <h2
             className="text-4xl sm:text-5xl font-bold text-gold-shimmer mb-4"
@@ -202,7 +197,7 @@ export default function GamesSection() {
             className="text-pearl-200/50 text-lg mt-4 max-w-xl mx-auto"
             style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic' }}
           >
-            Six legendary realms. Infinite fortunes. Your saga begins now.
+            Six legendary realms. Your saga begins now.
           </p>
         </div>
 
@@ -336,10 +331,7 @@ export default function GamesSection() {
                         </p>
                         <p className="text-white/30 text-[10px]">{game.players} playing now</p>
                       </div>
-                      <a
-                        href={gamePlayUrls[game.slug]}
-                        target="_blank"
-                        rel="noopener noreferrer"
+                      <PlayButton
                         className="shrink-0 px-6 py-3 rounded-lg text-xs font-bold tracking-[0.2em] uppercase transition-all duration-300 btn-press inline-block"
                         style={{
                           background: isHovered
@@ -351,26 +343,13 @@ export default function GamesSection() {
                         }}
                       >
                         Play Now
-                      </a>
+                      </PlayButton>
                     </div>
                   </div>
                 </div>
               </div>
             );
           })}
-        </div>
-
-        {/* Bottom CTA */}
-        <div className="text-center mt-14">
-          <p className="text-pearl-300/40 text-sm tracking-widest mb-4" style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic' }}>
-            500+ more games in our collection
-          </p>
-          <button
-            className="px-8 py-3 border border-gold-600/30 rounded-full text-gold-400 text-xs tracking-[0.3em] uppercase hover:border-gold-400 hover:bg-gold-DEFAULT/5 transition-all duration-300"
-            style={{ fontFamily: "'Cinzel', serif" }}
-          >
-            Browse All Games
-          </button>
         </div>
       </div>
     </section>

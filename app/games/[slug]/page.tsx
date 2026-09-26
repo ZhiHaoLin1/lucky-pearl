@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { Gem, ArrowLeft, Users, Zap, Trophy, Star } from 'lucide-react';
 import type { Metadata } from 'next';
-import { getGamePlayUrl } from '@/lib/gamePlayUrls';
+import PlayButton from '@/components/PlayButton';
 
 const gameData: Record<string, {
   name: string;
@@ -235,7 +235,6 @@ export async function generateStaticParams() {
 
 export default function GamePage({ params }: { params: Params }) {
   const game = gameData[params.slug];
-  const playUrl = getGamePlayUrl(params.slug);
   const readableFont = "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif";
 
   if (!game) {
@@ -348,24 +347,16 @@ export default function GamePage({ params }: { params: Params }) {
           </div>
 
           {/* Play button */}
-          {playUrl ? (
-            <a
-              href={playUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-block px-12 py-5 text-sm tracking-[0.3em] uppercase font-bold text-navy-900 rounded-xl btn-press"
-              style={{
-                background: `linear-gradient(135deg, ${game.accentColor}, ${game.accentColor}aa)`,
-                boxShadow: `0 0 40px ${game.glowColor}`,
-                fontFamily: readableFont,
-              }}
-            >
-              Play {game.name}
-            </a>
-          ) : null}
-          <p className="text-pearl-300/30 text-xs mt-3" style={{ fontFamily: readableFont }}>
-            Opens the game platform in a new tab
-          </p>
+          <PlayButton
+            className="inline-block px-12 py-5 text-sm tracking-[0.3em] uppercase font-bold text-navy-900 rounded-xl btn-press"
+            style={{
+              background: `linear-gradient(135deg, ${game.accentColor}, ${game.accentColor}aa)`,
+              boxShadow: `0 0 40px ${game.glowColor}`,
+              fontFamily: readableFont,
+            }}
+          >
+            Play {game.name}
+          </PlayButton>
         </div>
       </section>
 
@@ -474,20 +465,15 @@ export default function GamePage({ params }: { params: Params }) {
               >
                 {game.jackpot}
               </p>
-              {playUrl ? (
-                <a
-                  href={playUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="block w-full py-4 rounded-xl text-sm font-bold tracking-widest uppercase text-navy-900 text-center btn-press"
-                  style={{
-                    background: `linear-gradient(135deg, ${game.accentColor}, ${game.accentColor}aa)`,
-                    fontFamily: readableFont,
-                  }}
-                >
-                  Play {game.name}
-                </a>
-              ) : null}
+              <PlayButton
+                className="block w-full py-4 rounded-xl text-sm font-bold tracking-widest uppercase text-navy-900 text-center btn-press"
+                style={{
+                  background: `linear-gradient(135deg, ${game.accentColor}, ${game.accentColor}aa)`,
+                  fontFamily: readableFont,
+                }}
+              >
+                Play {game.name}
+              </PlayButton>
             </div>
 
             {/* Game specs */}

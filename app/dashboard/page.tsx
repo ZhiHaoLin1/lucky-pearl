@@ -6,6 +6,8 @@ import { getSessionUser } from '@/lib/auth';
 import { gamePlayUrls } from '@/lib/gamePlayUrls';
 import { getFinanceSummary } from '@/lib/finance';
 import { getNextTier, VIP_TIERS } from '@/lib/vip';
+import DailyLeaderboard from '@/components/DailyLeaderboard';
+import VIPSection from '@/components/VIPSection';
 import LogoutButton from './LogoutButton';
 import InboxClient from './InboxClient';
 import DashboardTabs from './DashboardTabs';
@@ -206,6 +208,8 @@ export default async function DashboardPage() {
               </div>
             </div>
             <HowToDepositCard isGoldOrAbove={isGoldOrAbove} />
+            <DailyLeaderboard />
+            <VIPSection />
             </div>
           }
           withdrawProps={{

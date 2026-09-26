@@ -56,7 +56,7 @@ function getDailyTopTen(dateKey: string): LeaderboardEntry[] {
     if (used.has(index)) continue;
     used.add(index);
 
-    const dollars = Math.floor(random() * 12000) + 250;
+    const dollars = Math.floor(random() * 341) + 110;
     const cents = random() < 0.5 ? 0 : 50;
     const platform = GAME_PLATFORMS[Math.floor(random() * GAME_PLATFORMS.length)];
 
@@ -103,8 +103,8 @@ export default function DailyLeaderboard() {
   }, []);
 
   return (
-    <section id="leaderboard" className="py-16 sm:py-20 px-6">
-      <div className="max-w-4xl mx-auto rounded-2xl border border-gold-600/20 bg-white/[0.02] p-6 sm:p-10">
+    <section id="leaderboard" className="mb-6">
+      <div className="rounded-2xl border border-gold-600/25 bg-navy-800/60 p-6 sm:p-8">
         <div className="mb-8 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
           <div>
             <p className="text-gold-500/90 text-sm font-semibold tracking-wide uppercase mb-2">Today&apos;s highlights</p>
