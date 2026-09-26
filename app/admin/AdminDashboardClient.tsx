@@ -262,7 +262,7 @@ export default function AdminDashboardClient({
 
   return (
     <div>
-      <div className="flex gap-2 mb-5 border-b border-white/10 overflow-x-auto">
+      <div className="flex gap-2 mb-5 border-b border-white/10 overflow-x-auto overflow-y-hidden">
         {(['customers', 'broadcast', 'square', 'email'] as const).map((key) => (
           <button
             key={key}
@@ -490,7 +490,7 @@ export default function AdminDashboardClient({
                 </button>
               </div>
 
-              <div className="flex gap-2 mb-4 border-b border-white/10 overflow-x-auto">
+              <div className="flex gap-2 mb-4 border-b border-white/10 overflow-x-auto overflow-y-hidden">
                 {(['messages', 'finance'] as const).map((key) => (
                   <button
                     key={key}

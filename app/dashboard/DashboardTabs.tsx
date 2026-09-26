@@ -4,17 +4,15 @@ import { useState, type ReactNode } from 'react';
 import WithdrawTab, { type WithdrawTabProps } from './WithdrawTab';
 import DepositsTab, { type DepositRow } from './DepositsTab';
 
-type TabKey = 'overview' | 'deposits' | 'withdraw' | 'jackpots' | 'vip';
+type TabKey = 'overview' | 'deposits' | 'withdraw' | 'vip';
 
 export default function DashboardTabs({
   overview,
-  jackpots,
   vip,
   withdrawProps,
   initialDeposits,
 }: {
   overview: ReactNode;
-  jackpots: ReactNode;
   vip: ReactNode;
   withdrawProps: WithdrawTabProps;
   initialDeposits: DepositRow[];
@@ -25,7 +23,6 @@ export default function DashboardTabs({
     overview: 'Overview',
     deposits: 'Deposit History',
     withdraw: 'Withdraw',
-    jackpots: 'Jackpots',
     vip: 'VIP Club',
   };
 
@@ -34,10 +31,10 @@ export default function DashboardTabs({
       {/* Pill grid, not a horizontal scroller — customers here skew
           elderly/less tech-comfortable, and a tab hidden behind a swipe
           gesture is a tab they may never find. Every tab stays visible at
-          every width; on narrow screens the 5 tabs wrap to two rows
-          instead of relying on a shared bottom-border alignment trick. */}
-      <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 mb-6">
-        {(['overview', 'deposits', 'withdraw', 'jackpots', 'vip'] as const).map((key) => (
+          every width; on narrow screens the 4 tabs sit in a clean 2x2
+          grid instead of relying on a shared bottom-border alignment trick. */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-6">
+        {(['overview', 'deposits', 'withdraw', 'vip'] as const).map((key) => (
           <button
             key={key}
             type="button"
@@ -56,7 +53,6 @@ export default function DashboardTabs({
       {tab === 'overview' && overview}
       {tab === 'deposits' && <DepositsTab initialDeposits={initialDeposits} />}
       {tab === 'withdraw' && <WithdrawTab {...withdrawProps} />}
-      {tab === 'jackpots' && jackpots}
       {tab === 'vip' && vip}
     </div>
   );

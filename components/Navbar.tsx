@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Menu, X, Gem, Gamepad2, Wallet, Headphones } from 'lucide-react';
+import { Menu, X, Gem, Gamepad2, Wallet, Headphones, LogIn } from 'lucide-react';
 import Turnstile, { type TurnstileHandle } from './Turnstile';
 
 const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? '';
@@ -634,7 +634,7 @@ export default function Navbar() {
       )}
 
       <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 border-t border-gold-600/25 bg-navy-900/98 backdrop-blur-md safe-bottom">
-        <div className="grid grid-cols-4 gap-0">
+        <div className={`grid gap-0 ${!authLoading && !loggedIn ? 'grid-cols-5' : 'grid-cols-4'}`}>
           {mobileQuickLinks.map((item) => (
             <a
               key={item.label}
@@ -645,6 +645,16 @@ export default function Navbar() {
               <span className="text-xs font-semibold">{item.label}</span>
             </a>
           ))}
+          {!authLoading && !loggedIn && (
+            <button
+              type="button"
+              onClick={showLoginForm}
+              className="flex flex-col items-center justify-center gap-1 min-h-[64px] py-2 text-pearl-200 hover:text-gold-400 active:bg-white/5"
+            >
+              <LogIn className="w-6 h-6" aria-hidden />
+              <span className="text-xs font-semibold">Log In</span>
+            </button>
+          )}
           <button
             type="button"
             onClick={primaryCtaAction}
