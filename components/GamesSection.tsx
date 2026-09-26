@@ -328,10 +328,10 @@ export default function GamesSection() {
                     </div>
 
                     {/* Bottom: jackpot + play button */}
-                    <div className="flex items-center justify-between">
-                      <div>
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div className="min-w-0">
                         <p className="text-white/40 text-[10px] tracking-[0.3em] uppercase">Jackpot</p>
-                        <p className="text-lg font-bold" style={{ color: game.accentColor, fontFamily: "'Cinzel', serif" }}>
+                        <p className="text-lg font-bold truncate" style={{ color: game.accentColor, fontFamily: "'Cinzel', serif" }}>
                           {game.jackpot}
                         </p>
                         <p className="text-white/30 text-[10px]">{game.players} playing now</p>
@@ -340,7 +340,7 @@ export default function GamesSection() {
                         href={gamePlayUrls[game.slug]}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="px-6 py-3 rounded-lg text-xs font-bold tracking-[0.2em] uppercase transition-all duration-300 btn-press inline-block"
+                        className="shrink-0 px-6 py-3 rounded-lg text-xs font-bold tracking-[0.2em] uppercase transition-all duration-300 btn-press inline-block"
                         style={{
                           background: isHovered
                             ? game.accentColor

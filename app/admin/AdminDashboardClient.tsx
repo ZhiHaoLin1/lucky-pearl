@@ -262,13 +262,13 @@ export default function AdminDashboardClient({
 
   return (
     <div>
-      <div className="flex gap-2 mb-5 border-b border-white/10">
+      <div className="flex gap-2 mb-5 border-b border-white/10 overflow-x-auto">
         {(['customers', 'broadcast', 'square', 'email'] as const).map((key) => (
           <button
             key={key}
             type="button"
             onClick={() => setView(key)}
-            className={`flex items-center gap-2 px-4 py-2.5 text-sm font-semibold border-b-2 -mb-px transition-colors ${
+            className={`shrink-0 whitespace-nowrap flex items-center gap-2 px-4 py-2.5 text-sm font-semibold border-b-2 -mb-px transition-colors ${
               view === key
                 ? 'border-gold-400 text-gold-400'
                 : 'border-transparent text-pearl-300/60 hover:text-pearl-100'
@@ -490,13 +490,13 @@ export default function AdminDashboardClient({
                 </button>
               </div>
 
-              <div className="flex gap-2 mb-4 border-b border-white/10">
+              <div className="flex gap-2 mb-4 border-b border-white/10 overflow-x-auto">
                 {(['messages', 'finance'] as const).map((key) => (
                   <button
                     key={key}
                     type="button"
                     onClick={() => setDetailTab(key)}
-                    className={`px-4 py-2 text-sm font-semibold border-b-2 -mb-px transition-colors ${
+                    className={`shrink-0 whitespace-nowrap px-4 py-2 text-sm font-semibold border-b-2 -mb-px transition-colors ${
                       detailTab === key
                         ? 'border-gold-400 text-gold-400'
                         : 'border-transparent text-pearl-300/60 hover:text-pearl-100'

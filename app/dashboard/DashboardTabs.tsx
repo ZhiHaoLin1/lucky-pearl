@@ -23,13 +23,17 @@ export default function DashboardTabs({
 
   return (
     <div className="mb-12">
-      <div className="flex gap-2 mb-6 border-b border-white/10">
+      {/* Fixed 3-column grid, not a horizontal scroller — customers here
+          skew elderly/less tech-comfortable, and a tab hidden behind a
+          swipe gesture is a tab they may never find. Every tab stays
+          visible at every width; long labels wrap instead of hiding. */}
+      <div className="grid grid-cols-3 mb-6 border-b border-white/10">
         {(['overview', 'deposits', 'withdraw'] as const).map((key) => (
           <button
             key={key}
             type="button"
             onClick={() => setTab(key)}
-            className={`px-5 py-3 text-sm font-semibold border-b-2 -mb-px transition-colors ${
+            className={`px-1 sm:px-5 py-3 text-xs sm:text-sm font-semibold border-b-2 -mb-px transition-colors text-center leading-tight ${
               tab === key
                 ? 'border-gold-400 text-gold-400'
                 : 'border-transparent text-pearl-300/60 hover:text-pearl-100'
