@@ -1,16 +1,21 @@
 // Minimal Gmail API client (plain fetch, no googleapis dependency) used to
-// poll a single mailbox for Venmo/Zelle payment notifications, since we
-// don't have a working inbound-email-to-webhook provider (Twilio/SendGrid
-// closed the account on signup, likely over the gambling-adjacent
-// vertical). Uses a long-lived refresh token for one Gmail account,
-// obtained once via scripts/gmail-oauth-setup.mjs.
+// poll a mailbox for Venmo/Zelle payment notifications, since we don't have
+// a working inbound-email-to-webhook provider (Twilio/SendGrid closed the
+// account on signup, likely over the gambling-adjacent vertical). Uses a
+// long-lived refresh token for one Gmail account, obtained once via
+// scripts/gmail-oauth-setup.mjs.
 //
-// Strictly read-only (gmail.readonly scope) and deliberately never writes
-// anything back to the mailbox — no mark-as-read, no labels. That inbox has
-// a separate, independent poller also reading it for other purposes, and
-// this one must never mutate shared mailbox state (read/unread, labels)
-// that the other system might also depend on. Our own database is the only
-// place "already processed" is tracked (see emailDepositProcessor.ts).
+// Polls a dedicated inbox that only receives forwarded copies of these
+// notifications (the real Zelle/Venmo account is elsewhere and has its own
+// separate poller reading it for other purposes) — kept deliberately
+// independent so the two never interact.
+//
+// Strictly read-only (gmail.readonly scope) and never writes anything back
+// to the mailbox — no mark-as-read, no labels. Our own database is the only
+// place "already processed" is tracked (see emailDepositProcessor.ts); that
+// was originally required to avoid a shared-state race with the other
+// poller, and is kept even now that this inbox is dedicated, since it's
+// simple, safe, and costs nothing.
 
 type GmailMessagePart = {
   mimeType?: string;
@@ -62,10 +67,9 @@ export async function getAccessToken(): Promise<string> {
  * only a received-payment notification uses that exact phrasing.
  *
  * Deliberately NOT filtered to is:unread and never mutates anything in the
- * mailbox (see the module comment) — this inbox has a separate, independent
- * poller reading the same mail, and this one must never affect what that
- * one sees. Re-seeing an already-handled message every poll is fine; our
- * own database (email_message_id) is what prevents double-processing it.
+ * mailbox (see the module comment). Re-seeing an already-handled message
+ * every poll is fine; our own database (email_message_id) is what prevents
+ * double-processing it.
  */
 export async function listCandidateMessageIds(accessToken: string): Promise<string[]> {
   const query = '((from:zelle.discover.com subject:"sent you") OR (from:venmo.com subject:"paid you")) newer_than:2d';
