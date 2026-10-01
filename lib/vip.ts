@@ -26,7 +26,7 @@ export const VIP_TIERS: VipTier[] = [
     minDepositsCents: 250_000,
     dailyLimitCents: 20_000,
     features: ['Referral bonus', 'Birthday bonus: up to $25', 'Priority text support'],
-    terms: 'Birthday bonus: $5 bonus × up to 5 deposits (up to $25 total), $25 minimum deposit, valid 1 week.',
+    terms: 'Birthday bonus: $5 bonus on each of your next 5 deposits of $10 or more (up to $25 total), valid 1 week.',
   },
   {
     name: 'Gold',
@@ -35,7 +35,7 @@ export const VIP_TIERS: VipTier[] = [
     minDepositsCents: 1_000_000,
     dailyLimitCents: 30_000,
     features: ['Card & Apple Pay deposits', 'Holiday bonus: up to $25', 'Cashout from 9AM'],
-    terms: 'Holiday bonus: $5 bonus × up to 5 deposits (up to $25 total), $25 minimum deposit, valid 1 week.',
+    terms: 'Holiday bonus: $5 bonus on each of your next 5 deposits of $10 or more (up to $25 total), valid 1 week.',
   },
   {
     name: 'Dragon',

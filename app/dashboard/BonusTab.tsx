@@ -53,7 +53,7 @@ export default function BonusTab({ emoji, heading, intro, qualifyingDeposits, ea
       <p className="text-pearl-100 text-base mb-1">
         {complete
           ? "You've earned the full bonus! 🎉"
-          : `Each deposit of ${dollars(MIN_QUALIFYING_DEPOSIT_CENTS)} or more adds ${dollars(BONUS_PER_DEPOSIT_CENTS)}.`}
+          : `Your next ${MAX_BONUS_DEPOSITS} deposits of ${dollars(MIN_QUALIFYING_DEPOSIT_CENTS)} or more each earn an extra ${dollars(BONUS_PER_DEPOSIT_CENTS)}.`}
       </p>
       <p className="text-pearl-300/70 text-sm mb-6">
         {qualifyingDeposits} of {MAX_BONUS_DEPOSITS} deposits counted · Ends {endsLabel}
@@ -68,8 +68,8 @@ export default function BonusTab({ emoji, heading, intro, qualifyingDeposits, ea
           and we&apos;ll add your bonus.
         </p>
         <p className="text-pearl-300/60 text-xs">
-          Terms: {dollars(BONUS_PER_DEPOSIT_CENTS)} bonus × up to {MAX_BONUS_DEPOSITS} deposits (up to {dollars(MAX_BONUS_CENTS)}{' '}
-          total), {dollars(MIN_QUALIFYING_DEPOSIT_CENTS)} minimum qualifying deposit, valid 1 week.
+          Terms: {dollars(BONUS_PER_DEPOSIT_CENTS)} bonus on each of your next {MAX_BONUS_DEPOSITS} deposits of{' '}
+          {dollars(MIN_QUALIFYING_DEPOSIT_CENTS)} or more (up to {dollars(MAX_BONUS_CENTS)} total), valid 1 week.
         </p>
       </div>
     </div>

@@ -4,7 +4,7 @@ import { getEasternDayRangeUtc, toSqliteDateTime } from './easternDay';
 // Birthday & holiday bonus: $5 per qualifying deposit, up to 5 deposits ($25
 // total), inside a 1-week window that starts on the holiday / birthday.
 export const BONUS_PER_DEPOSIT_CENTS = 500;
-export const MIN_QUALIFYING_DEPOSIT_CENTS = 2_500;
+export const MIN_QUALIFYING_DEPOSIT_CENTS = 1_000;
 export const MAX_BONUS_DEPOSITS = 5;
 export const BONUS_WINDOW_DAYS = 7;
 export const MAX_BONUS_CENTS = BONUS_PER_DEPOSIT_CENTS * MAX_BONUS_DEPOSITS;
@@ -126,7 +126,7 @@ export function getActiveBirthdayWindow(
 
 export type BonusProgress = { qualifyingDeposits: number; earnedCents: number };
 
-/** Qualifying deposits (>= $25) the customer's payments have recorded inside the window. */
+/** Qualifying deposits (>= $10) the customer's payments have recorded inside the window. */
 export async function getBonusProgress(userId: string, window: BonusWindow): Promise<BonusProgress> {
   const result = await db.execute({
     sql: `SELECT COUNT(*) AS n FROM deposits
