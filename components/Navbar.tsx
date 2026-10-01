@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Menu, X, Gem, Gamepad2, Wallet, Headphones, LogIn } from 'lucide-react';
 import Turnstile, { type TurnstileHandle } from './Turnstile';
+import BirthdaySelect from './BirthdaySelect';
 
 const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? '';
 
@@ -37,6 +38,8 @@ export default function Navbar() {
     email: '',
     phone: '',
     preferredGame: '',
+    birthMonth: '',
+    birthDay: '',
     password: '',
     confirmPassword: '',
   });
@@ -151,6 +154,8 @@ export default function Navbar() {
         email: '',
         phone: '',
         preferredGame: '',
+        birthMonth: '',
+        birthDay: '',
         password: '',
         confirmPassword: '',
       });
@@ -423,6 +428,17 @@ export default function Navbar() {
                     className="w-full rounded-xl bg-navy-900 border border-gold-600/25 px-4 py-3.5 text-base text-pearl-100 focus:border-gold-400 focus:outline-none focus:ring-2 focus:ring-gold-400/30"
                   />
                 </label>
+                <div className="block">
+                  <span className="text-pearl-200 text-sm font-medium mb-1.5 block">Birthday (optional)</span>
+                  <BirthdaySelect
+                    month={formData.birthMonth}
+                    day={formData.birthDay}
+                    onChange={({ month, day }) => setFormData((prev) => ({ ...prev, birthMonth: month, birthDay: day }))}
+                  />
+                  <span className="text-pearl-300/60 text-xs mt-1.5 block">
+                    Unlocks your birthday bonus. It can&apos;t be changed later.
+                  </span>
+                </div>
                 <label className="block">
                   <span className="text-pearl-200 text-sm font-medium mb-1.5 block">Password</span>
                   <input

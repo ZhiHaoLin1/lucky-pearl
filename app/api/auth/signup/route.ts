@@ -4,6 +4,7 @@ import { NextResponse } from 'next/server';
 import { db, ensureSchema } from '@/lib/db';
 import { attachSessionCookie } from '@/lib/auth';
 import { verifyTurnstileToken } from '@/lib/turnstile';
+import { isValidBirthday } from '@/lib/bonuses';
 
 type SignupPayload = {
   fullName?: string;
@@ -11,6 +12,8 @@ type SignupPayload = {
   phone?: string;
   preferredGame?: string;
   password?: string;
+  birthMonth?: string | number;
+  birthDay?: string | number;
   turnstileToken?: string;
 };
 
@@ -43,6 +46,17 @@ export async function POST(request: Request) {
       );
     }
 
+    // Birthday is optional, but if one part is given it has to be a real date.
+    let birthday: string | null = null;
+    if (body.birthMonth || body.birthDay) {
+      const month = Number(body.birthMonth);
+      const day = Number(body.birthDay);
+      if (!isValidBirthday(month, day)) {
+        return NextResponse.json({ error: 'Enter a valid birthday.' }, { status: 400 });
+      }
+      birthday = `${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    }
+
     if (process.env.TURNSTILE_SECRET_KEY) {
       const remoteIp = request.headers.get('cf-connecting-ip') || request.headers.get('x-forwarded-for');
       const captchaOk = await verifyTurnstileToken(body.turnstileToken ?? '', remoteIp);
@@ -69,8 +83,9 @@ export async function POST(request: Request) {
     const id = randomUUID();
 
     await db.execute({
-      sql: 'INSERT INTO users (id, full_name, email, phone, preferred_game, password_hash) VALUES (?, ?, ?, ?, ?, ?)',
-      args: [id, fullName, email, phone, preferredGame || null, passwordHash],
+      sql: `INSERT INTO users (id, full_name, email, phone, preferred_game, password_hash, birthday, birthday_set_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ${birthday ? "datetime('now')" : 'NULL'})`,
+      args: [id, fullName, email, phone, preferredGame || null, passwordHash, birthday],
     });
 
     const webhookUrl = process.env.DISCORD_WEBHOOK_URL;

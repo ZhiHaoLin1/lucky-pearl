@@ -53,6 +53,8 @@ export type SessionUser = {
   preferredGame: string | null;
   role: string;
   createdAt: string;
+  birthday: string | null;
+  birthdaySetAt: string | null;
 };
 
 export async function getSessionUser(): Promise<SessionUser | null> {
@@ -64,7 +66,7 @@ export async function getSessionUser(): Promise<SessionUser | null> {
 
   await ensureSchema();
   const result = await db.execute({
-    sql: 'SELECT id, full_name, email, phone, preferred_game, role, created_at FROM users WHERE id = ?',
+    sql: 'SELECT id, full_name, email, phone, preferred_game, role, created_at, birthday, birthday_set_at FROM users WHERE id = ?',
     args: [userId],
   });
   const row = result.rows[0];
@@ -78,6 +80,8 @@ export async function getSessionUser(): Promise<SessionUser | null> {
     preferredGame: row.preferred_game ? String(row.preferred_game) : null,
     role: String(row.role),
     createdAt: String(row.created_at),
+    birthday: row.birthday ? String(row.birthday) : null,
+    birthdaySetAt: row.birthday_set_at ? String(row.birthday_set_at) : null,
   };
 }
 

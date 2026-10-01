@@ -41,6 +41,14 @@ export function ensureSchema() {
       if (!columnNames.has('tier_override')) {
         await db.execute('ALTER TABLE users ADD COLUMN tier_override TEXT');
       }
+      // Birthday as "MM-DD" (no year), set once, for the birthday bonus.
+      // birthday_set_at lets us require it was saved before the window opens.
+      if (!columnNames.has('birthday')) {
+        await db.execute('ALTER TABLE users ADD COLUMN birthday TEXT');
+      }
+      if (!columnNames.has('birthday_set_at')) {
+        await db.execute('ALTER TABLE users ADD COLUMN birthday_set_at TEXT');
+      }
 
       await Promise.all([
         db.execute(

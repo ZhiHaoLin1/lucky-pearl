@@ -6,10 +6,19 @@ import { getSessionUser } from '@/lib/auth';
 import { gamePlayUrls } from '@/lib/gamePlayUrls';
 import { getFinanceSummary } from '@/lib/finance';
 import { getNextTier, VIP_TIERS } from '@/lib/vip';
+import {
+  formatBirthday,
+  getActiveBirthdayWindow,
+  getActiveHolidayWindow,
+  getBonusProgress,
+  type BonusWindow,
+} from '@/lib/bonuses';
 import VIPSection from '@/components/VIPSection';
 import LogoutButton from './LogoutButton';
 import InboxClient from './InboxClient';
-import DashboardTabs from './DashboardTabs';
+import DashboardTabs, { type BonusTabEntry } from './DashboardTabs';
+import BonusTab from './BonusTab';
+import BirthdayRow from './BirthdayRow';
 import HowToDepositCard from './HowToDepositCard';
 
 export const dynamic = 'force-dynamic';
@@ -62,6 +71,54 @@ export default async function DashboardPage() {
   const goldIndex = VIP_TIERS.findIndex((tier) => tier.name === 'Gold');
   const currentTierIndex = VIP_TIERS.findIndex((tier) => tier.name === financeSummary.tier.name);
   const isGoldOrAbove = currentTierIndex >= goldIndex;
+  // Holiday bonus is a Gold perk, birthday bonus a Jade perk (higher tiers keep lower-tier perks).
+  const jadeIndex = VIP_TIERS.findIndex((tier) => tier.name === 'Jade');
+  const bonusTabs: BonusTabEntry[] = [];
+  const addBonusTab = async (key: string, tabLabel: string, window: BonusWindow, heading: string, intro: string) => {
+    const progress = await getBonusProgress(user.id, window);
+    const endsLabel = new Date(window.endUtc.getTime() - 60 * 60 * 1000).toLocaleDateString('en-US', {
+      timeZone: 'America/New_York',
+      weekday: 'long',
+      month: 'long',
+      day: 'numeric',
+    });
+    bonusTabs.push({
+      key,
+      label: tabLabel,
+      content: (
+        <BonusTab
+          emoji={window.emoji}
+          heading={heading}
+          intro={intro}
+          qualifyingDeposits={progress.qualifyingDeposits}
+          earnedCents={progress.earnedCents}
+          endsLabel={endsLabel}
+        />
+      ),
+    });
+  };
+
+  const holidayWindow = isGoldOrAbove ? getActiveHolidayWindow() : null;
+  if (holidayWindow) {
+    await addBonusTab(
+      'bonus-holiday',
+      `${holidayWindow.emoji} Holiday Bonus`,
+      holidayWindow,
+      `Happy ${holidayWindow.title}!`,
+      'As a Gold member, you can earn a holiday bonus this week.'
+    );
+  }
+  const birthdayWindow = currentTierIndex >= jadeIndex ? getActiveBirthdayWindow(user.birthday, user.birthdaySetAt) : null;
+  if (birthdayWindow) {
+    await addBonusTab(
+      'bonus-birthday',
+      '🎂 Birthday Bonus',
+      birthdayWindow,
+      `Happy Birthday, ${user.fullName.split(' ')[0]}!`,
+      'Here is your birthday bonus. Make deposits this week to earn it.'
+    );
+  }
+
   const withdrawalsResult = await db.execute({
     sql: `SELECT id, amount_cents, method, payout_detail, fee_cents, status, created_at
           FROM withdrawals WHERE user_id = ? AND hidden_from_customer_at IS NULL ORDER BY created_at DESC`,
@@ -155,6 +212,7 @@ export default async function DashboardPage() {
                       <p className="text-pearl-100">{memberSince}</p>
                     </div>
                   </div>
+                  <BirthdayRow birthdayLabel={user.birthday ? formatBirthday(user.birthday) : null} />
                 </div>
               </div>
 
@@ -242,6 +300,7 @@ export default async function DashboardPage() {
             initialWithdrawals,
           }}
           initialDeposits={initialDeposits}
+          bonusTabs={bonusTabs}
         />
       </div>
     </main>
