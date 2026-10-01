@@ -1,10 +1,13 @@
 'use client';
 
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import WithdrawTab, { type WithdrawTabProps } from './WithdrawTab';
 import DepositsTab, { type DepositRow } from './DepositsTab';
 
 type TabKey = 'overview' | 'deposits' | 'withdraw' | 'vip';
+
+const TAB_KEYS: TabKey[] = ['overview', 'deposits', 'withdraw', 'vip'];
+const TAB_STORAGE_KEY = 'lp-dashboard-tab';
 
 export default function DashboardTabs({
   overview,
@@ -17,7 +20,23 @@ export default function DashboardTabs({
   withdrawProps: WithdrawTabProps;
   initialDeposits: DepositRow[];
 }) {
-  const [tab, setTab] = useState<TabKey>('overview');
+  const [tab, setTabState] = useState<TabKey>('overview');
+
+  // Remember the selected tab across refreshes. Restored after mount (not in
+  // the useState initializer) so the first client render matches the server's.
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(TAB_STORAGE_KEY);
+      if (saved && (TAB_KEYS as string[]).includes(saved)) setTabState(saved as TabKey);
+    } catch {}
+  }, []);
+
+  const setTab = (next: TabKey) => {
+    setTabState(next);
+    try {
+      localStorage.setItem(TAB_STORAGE_KEY, next);
+    } catch {}
+  };
 
   const tabLabel: Record<TabKey, string> = {
     overview: 'Overview',
@@ -34,7 +53,7 @@ export default function DashboardTabs({
           every width; on narrow screens the 4 tabs sit in a clean 2x2
           grid instead of relying on a shared bottom-border alignment trick. */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-6">
-        {(['overview', 'deposits', 'withdraw', 'vip'] as const).map((key) => (
+        {TAB_KEYS.map((key) => (
           <button
             key={key}
             type="button"
