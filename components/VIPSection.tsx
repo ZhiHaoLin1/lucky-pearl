@@ -70,6 +70,18 @@ export default function VIPSection({ currentTierName }: { currentTierName: strin
                   </span>
                 ))}
               </div>
+
+              {tier.terms && (
+                <details className="mt-3 text-xs">
+                  <summary
+                    className="cursor-pointer select-none font-semibold underline underline-offset-2"
+                    style={{ color: tier.color }}
+                  >
+                    See bonus terms
+                  </summary>
+                  <p className="mt-2 text-pearl-300/80 leading-relaxed">{tier.terms}</p>
+                </details>
+              )}
             </div>
           );
         })}

@@ -5,6 +5,8 @@ export type VipTier = {
   minDepositsCents: number;
   dailyLimitCents: number;
   features: string[];
+  // Fine print for the tier's bonus, shown behind a "See bonus terms" tap.
+  terms?: string;
 };
 
 export const VIP_TIERS: VipTier[] = [
@@ -15,7 +17,7 @@ export const VIP_TIERS: VipTier[] = [
     minDepositsCents: 0,
     // Matches the $110 Cash App minimum so every tier can withdraw via Cash App.
     dailyLimitCents: 11_000,
-    features: ['Entry tier for every member', 'Daily bonus on Golden Dragon, River & Magic City'],
+    features: ['Daily bonus on Golden Dragon, River & Magic City'],
   },
   {
     name: 'Jade',
@@ -23,7 +25,8 @@ export const VIP_TIERS: VipTier[] = [
     color: '#34d399',
     minDepositsCents: 250_000,
     dailyLimitCents: 20_000,
-    features: ['Referral bonus', 'Birthday bonus: $5 bonus × up to 5 deposits (up to $25 total), $25 minimum deposit, valid 1 week', 'Priority text support'],
+    features: ['Referral bonus', 'Birthday bonus: up to $25', 'Priority text support'],
+    terms: 'Birthday bonus: $5 bonus × up to 5 deposits (up to $25 total), $25 minimum deposit, valid 1 week.',
   },
   {
     name: 'Gold',
@@ -31,7 +34,8 @@ export const VIP_TIERS: VipTier[] = [
     color: '#d4af37',
     minDepositsCents: 1_000_000,
     dailyLimitCents: 30_000,
-    features: ['Card & Apple Pay deposits unlocked', 'Holiday bonus: $5 bonus × up to 5 deposits (up to $25 total), $25 minimum deposit, valid 1 week', 'Extended cashout hours starting 9AM'],
+    features: ['Card & Apple Pay deposits', 'Holiday bonus: up to $25', 'Cashout from 9AM'],
+    terms: 'Holiday bonus: $5 bonus × up to 5 deposits (up to $25 total), $25 minimum deposit, valid 1 week.',
   },
   {
     name: 'Dragon',
@@ -39,7 +43,7 @@ export const VIP_TIERS: VipTier[] = [
     color: '#ff6b35',
     minDepositsCents: 2_500_000,
     dailyLimitCents: 50_000,
-    features: ['Request new game platforms', 'No-fee deposit day once a month'],
+    features: ['Request new games', 'No-fee deposit day monthly'],
   },
 ];
 
