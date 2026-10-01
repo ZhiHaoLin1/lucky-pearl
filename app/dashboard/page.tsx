@@ -344,6 +344,7 @@ export default async function DashboardPage() {
           }
           vip={<VIPSection currentTierName={financeSummary.tier.name} />}
           events={
+            eventCards.some((card) => card.status === 'running') && (
             <EventsTab
               events={eventCards}
               member={{
@@ -353,6 +354,7 @@ export default async function DashboardPage() {
                 holidayEligible: isGoldOrAbove,
               }}
             />
+            )
           }
           withdrawProps={{
             tier: financeSummary.tier,

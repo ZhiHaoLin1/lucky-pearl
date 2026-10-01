@@ -9,7 +9,7 @@ type TabKey = string;
 
 export type BonusTabEntry = { key: string; label: string; content: ReactNode };
 
-const BASE_TAB_KEYS = ['overview', 'deposits', 'withdraw', 'vip', 'events'];
+const BASE_TAB_KEYS = ['overview', 'deposits', 'withdraw', 'vip'];
 
 // Re-fetch the page data this often while a bonus tab is open so the progress
 // bar fills in as the payment parser matches new deposits.
@@ -26,7 +26,8 @@ export default function DashboardTabs({
 }: {
   overview: ReactNode;
   vip: ReactNode;
-  events: ReactNode;
+  // Only passed while at least one event is running; the Events tab is hidden otherwise.
+  events?: ReactNode;
   withdrawProps: WithdrawTabProps;
   initialDeposits: DepositRow[];
   // Only passed while a holiday / birthday bonus window is open.
@@ -34,7 +35,7 @@ export default function DashboardTabs({
 }) {
   const router = useRouter();
   const [tab, setTabState] = useState<TabKey>('overview');
-  const allKeys = [...BASE_TAB_KEYS, ...bonusTabs.map((entry) => entry.key)];
+  const allKeys = [...BASE_TAB_KEYS, ...(events ? ['events'] : []), ...bonusTabs.map((entry) => entry.key)];
   // A saved bonus tab may have expired; fall back to Overview instead of showing nothing.
   const activeTab = allKeys.includes(tab) ? tab : 'overview';
   const activeBonus = bonusTabs.find((entry) => entry.key === activeTab);
@@ -74,6 +75,7 @@ export default function DashboardTabs({
     { key: 'overview', label: tabLabel.overview, isBonus: false },
     ...bonusTabs.map((entry) => ({ key: entry.key, label: entry.label, isBonus: true })),
     ...BASE_TAB_KEYS.slice(1).map((key) => ({ key, label: tabLabel[key], isBonus: false })),
+    ...(events ? [{ key: 'events', label: tabLabel.events, isBonus: false }] : []),
   ];
   const gridCols = tabEntries.length >= 6 ? 'sm:grid-cols-3' : tabEntries.length === 5 ? 'sm:grid-cols-5' : 'sm:grid-cols-4';
 
