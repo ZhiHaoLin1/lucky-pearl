@@ -44,18 +44,10 @@ function EventCardView({ event }: { event: EventCard }) {
         {event.maxDeposits} deposits of {dollars(event.minDepositCents)} or more (up to{' '}
         <span className="text-gold-400 font-semibold">{dollars(maxBonusCents)}</span>).
       </p>
-      <p className="text-sm mt-2">
-        {event.eligible ? (
-          <span className="text-emerald-300">
-            {event.status === 'running'
-              ? `You're in! Track your progress on the ${event.emoji} ${event.name} tab above.`
-              : "You're eligible. A tab with your progress will appear when it starts."}
-          </span>
-        ) : (
-          <span className="text-pearl-300/70">
-            Open to {event.minTierLabel}. Keep depositing to reach {event.minTierName} and join in.
-          </span>
-        )}
+      <p className="text-sm mt-2 text-emerald-300">
+        {event.status === 'running'
+          ? `You're in! Track your progress on the ${event.emoji} ${event.name} tab above.`
+          : "You're eligible. A tab with your progress will appear when it starts."}
       </p>
     </div>
   );

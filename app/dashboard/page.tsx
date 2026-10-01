@@ -140,7 +140,7 @@ export default async function DashboardPage() {
     );
   }
 
-  // Always-on Events tab: running + upcoming events (including ones above the customer's tier).
+  // Events tab: running + upcoming events the customer is eligible for.
   const nowMs = Date.now();
   const easternDay = (iso: string) =>
     new Date(iso).toLocaleDateString('en-US', { timeZone: 'America/New_York', weekday: 'short', month: 'short', day: 'numeric' });
@@ -167,8 +167,8 @@ export default async function DashboardPage() {
         eligible: currentTierIndex >= minTierIndex,
       };
     })
-    // Events the customer can join first, then ones above their tier (sort is stable).
-    .sort((a, b) => Number(b.eligible) - Number(a.eligible));
+    // Events above the customer's tier are hidden entirely so they don't cause confusion.
+    .filter((card) => card.eligible);
   const nextHoliday = getNextHoliday();
 
   const withdrawalsResult = await db.execute({
