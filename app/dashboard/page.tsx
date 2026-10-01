@@ -10,6 +10,7 @@ import {
   formatBirthday,
   getActiveBirthdayWindow,
   getActiveHolidayWindow,
+  getNextHoliday,
   getBonusProgress,
   type BonusWindow,
 } from '@/lib/bonuses';
@@ -17,8 +18,9 @@ import VIPSection from '@/components/VIPSection';
 import LogoutButton from './LogoutButton';
 import InboxClient from './InboxClient';
 import DashboardTabs, { type BonusTabEntry } from './DashboardTabs';
-import { getEventWindows } from '@/lib/events';
+import { getEventWindows, listEvents } from '@/lib/events';
 import BonusTab from './BonusTab';
+import EventsTab, { type EventCard } from './EventsTab';
 import BirthdayRow from './BirthdayRow';
 import HowToDepositCard from './HowToDepositCard';
 
@@ -137,6 +139,37 @@ export default async function DashboardPage() {
       eventWindow.description || 'A special event for our members. Make deposits during the event to earn a bonus.'
     );
   }
+
+  // Always-on Events tab: running + upcoming events (including ones above the customer's tier).
+  const nowMs = Date.now();
+  const easternDay = (iso: string) =>
+    new Date(iso).toLocaleDateString('en-US', { timeZone: 'America/New_York', weekday: 'short', month: 'short', day: 'numeric' });
+  const eventCards: EventCard[] = (await listEvents())
+    .filter((event) => new Date(event.endsAt).getTime() > nowMs)
+    .reverse() // soonest first
+    .map((event) => {
+      const minTierIndex = VIP_TIERS.findIndex((tier) => tier.name === event.minTier);
+      const tierLabel =
+        minTierIndex <= 0 ? 'Everyone' : minTierIndex === VIP_TIERS.length - 1 ? `${event.minTier} members` : `${event.minTier} and above`;
+      return {
+        id: event.id,
+        emoji: event.emoji,
+        name: event.name,
+        description: event.description,
+        status: new Date(event.startsAt).getTime() <= nowMs ? ('running' as const) : ('upcoming' as const),
+        startsLabel: easternDay(event.startsAt),
+        endsLabel: easternDay(new Date(new Date(event.endsAt).getTime() - 60 * 60 * 1000).toISOString()),
+        perDepositCents: event.bonusPerDepositCents,
+        minDepositCents: event.minDepositCents,
+        maxDeposits: event.maxDeposits,
+        minTierLabel: tierLabel,
+        minTierName: event.minTier,
+        eligible: currentTierIndex >= minTierIndex,
+      };
+    })
+    // Events the customer can join first, then ones above their tier (sort is stable).
+    .sort((a, b) => Number(b.eligible) - Number(a.eligible));
+  const nextHoliday = getNextHoliday();
 
   const withdrawalsResult = await db.execute({
     sql: `SELECT id, amount_cents, method, payout_detail, fee_cents, status, created_at
@@ -310,6 +343,17 @@ export default async function DashboardPage() {
             </div>
           }
           vip={<VIPSection currentTierName={financeSummary.tier.name} />}
+          events={
+            <EventsTab
+              events={eventCards}
+              member={{
+                birthdayLabel: user.birthday ? formatBirthday(user.birthday) : null,
+                birthdayEligible: currentTierIndex >= jadeIndex,
+                nextHolidayLabel: nextHoliday ? `${nextHoliday.emoji} ${nextHoliday.name}, ${nextHoliday.dateLabel}` : 'See you next year',
+                holidayEligible: isGoldOrAbove,
+              }}
+            />
+          }
           withdrawProps={{
             tier: financeSummary.tier,
             nextTier,

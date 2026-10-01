@@ -9,7 +9,7 @@ type TabKey = string;
 
 export type BonusTabEntry = { key: string; label: string; content: ReactNode };
 
-const BASE_TAB_KEYS = ['overview', 'deposits', 'withdraw', 'vip'];
+const BASE_TAB_KEYS = ['overview', 'deposits', 'withdraw', 'vip', 'events'];
 
 // Re-fetch the page data this often while a bonus tab is open so the progress
 // bar fills in as the payment parser matches new deposits.
@@ -19,12 +19,14 @@ const TAB_STORAGE_KEY = 'lp-dashboard-tab';
 export default function DashboardTabs({
   overview,
   vip,
+  events,
   withdrawProps,
   initialDeposits,
   bonusTabs = [],
 }: {
   overview: ReactNode;
   vip: ReactNode;
+  events: ReactNode;
   withdrawProps: WithdrawTabProps;
   initialDeposits: DepositRow[];
   // Only passed while a holiday / birthday bonus window is open.
@@ -66,6 +68,7 @@ export default function DashboardTabs({
     deposits: 'Deposit History',
     withdraw: 'Withdraw',
     vip: 'VIP Club',
+    events: 'Events',
   };
   const tabEntries: Array<{ key: string; label: string; isBonus: boolean }> = [
     { key: 'overview', label: tabLabel.overview, isBonus: false },
@@ -104,6 +107,7 @@ export default function DashboardTabs({
       {activeTab === 'deposits' && <DepositsTab initialDeposits={initialDeposits} />}
       {activeTab === 'withdraw' && <WithdrawTab {...withdrawProps} />}
       {activeTab === 'vip' && vip}
+      {activeTab === 'events' && events}
       {activeBonus?.content}
     </div>
   );

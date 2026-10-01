@@ -125,6 +125,27 @@ export function listHolidayWindows(now: Date = new Date(), lookbackDays = 0): Bo
   return windows;
 }
 
+/** The next holiday whose bonus week hasn't started yet, with a readable date ("Saturday, July 4"). */
+export function getNextHoliday(now: Date = new Date()): { name: string; emoji: string; dateLabel: string } | null {
+  const year = easternYear(now);
+  let best: { holiday: Holiday; startUtc: Date } | null = null;
+  for (const y of [year, year + 1]) {
+    for (const holiday of holidaysForYear(y)) {
+      const { startUtc } = windowStartingOn(holiday.date);
+      if (startUtc > now && (!best || startUtc < best.startUtc)) best = { holiday, startUtc };
+    }
+  }
+  if (!best) return null;
+  const { year: y, month, day } = best.holiday.date;
+  const dateLabel = new Date(Date.UTC(y, month - 1, day)).toLocaleDateString('en-US', {
+    timeZone: 'UTC',
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+  });
+  return { name: best.holiday.name, emoji: best.holiday.emoji, dateLabel };
+}
+
 /** The holiday bonus window we're in right now (holiday + the following 6 days), if any. */
 export function getActiveHolidayWindow(now: Date = new Date()): BonusWindow | null {
   return listHolidayWindows(now, 0)[0] ?? null;
