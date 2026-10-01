@@ -25,7 +25,7 @@ export default function VIPSection({ currentTierName }: { currentTierName: strin
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {tiers.map((tier) => {
+        {tiers.map((tier, index) => {
           const isCurrent = tier.name === currentTierName;
           return (
             <div
@@ -59,6 +59,9 @@ export default function VIPSection({ currentTierName }: { currentTierName: strin
                 <span className="text-white font-bold text-sm">{tier.withdrawalLimit}</span>
               </div>
 
+              {index > 0 && (
+                <p className="text-pearl-300/70 text-xs mb-2">Everything in {tiers[index - 1].name}, plus:</p>
+              )}
               <div className="flex flex-wrap gap-1.5">
                 {tier.features.map((f) => (
                   <span
