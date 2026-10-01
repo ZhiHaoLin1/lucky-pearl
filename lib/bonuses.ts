@@ -38,6 +38,15 @@ function lastMonday(year: number, month: number): number {
   return lastDay - ((weekday - 1 + 7) % 7);
 }
 
+function standardRules(minTier: string) {
+  return {
+    perDepositCents: BONUS_PER_DEPOSIT_CENTS,
+    minDepositCents: MIN_QUALIFYING_DEPOSIT_CENTS,
+    maxDeposits: MAX_BONUS_DEPOSITS,
+    minTier,
+  };
+}
+
 export type Holiday = { name: string; emoji: string; date: Ymd };
 
 function holidaysForYear(year: number): Holiday[] {
@@ -56,9 +65,15 @@ function holidaysForYear(year: number): Holiday[] {
 }
 
 export type BonusWindow = {
+  // Rules for this particular bonus (events set their own).
+  perDepositCents: number;
+  minDepositCents: number;
+  maxDeposits: number;
+  minTier: string;
+  description?: string;
   // Stable id for payout tracking, e.g. "holiday:2026-07-04" or "birthday:2026-03-05".
   key: string;
-  kind: 'holiday' | 'birthday';
+  kind: 'holiday' | 'birthday' | 'event';
   title: string;
   emoji: string;
   startUtc: Date;
@@ -97,6 +112,7 @@ export function listHolidayWindows(now: Date = new Date(), lookbackDays = 0): Bo
       if (now >= startUtc && endUtc.getTime() > cutoff) {
         windows.push({
           key: `holiday:${ymdKey(holiday.date)}`,
+          ...standardRules('Gold'),
           kind: 'holiday',
           title: holiday.name,
           emoji: holiday.emoji,
@@ -148,6 +164,7 @@ export function listBirthdayWindows(
     if (now >= startUtc && endUtc.getTime() > cutoff && setAt <= startUtc) {
       windows.push({
         key: `birthday:${ymdKey(date)}`,
+        ...standardRules('Jade'),
         kind: 'birthday',
         title: 'Birthday Bonus',
         emoji: '\u{1F382}',
@@ -170,15 +187,15 @@ export function getActiveBirthdayWindow(
 
 export type BonusProgress = { qualifyingDeposits: number; earnedCents: number };
 
-/** Qualifying deposits (>= $10) the customer's payments have recorded inside the window. */
+/** Qualifying deposits the customer's payments have recorded inside the window, capped at the bonus limit. */
 export async function getBonusProgress(userId: string, window: BonusWindow): Promise<BonusProgress> {
   const result = await db.execute({
     sql: `SELECT COUNT(*) AS n FROM deposits
           WHERE user_id = ? AND amount_cents >= ? AND created_at >= ? AND created_at < ?`,
-    args: [userId, MIN_QUALIFYING_DEPOSIT_CENTS, toSqliteDateTime(window.startUtc), toSqliteDateTime(window.endUtc)],
+    args: [userId, window.minDepositCents, toSqliteDateTime(window.startUtc), toSqliteDateTime(window.endUtc)],
   });
-  const qualifyingDeposits = Math.min(MAX_BONUS_DEPOSITS, Number(result.rows[0]?.n ?? 0));
-  return { qualifyingDeposits, earnedCents: qualifyingDeposits * BONUS_PER_DEPOSIT_CENTS };
+  const qualifyingDeposits = Math.min(window.maxDeposits, Number(result.rows[0]?.n ?? 0));
+  return { qualifyingDeposits, earnedCents: qualifyingDeposits * window.perDepositCents };
 }
 
 export function isValidBirthday(month: number, day: number): boolean {

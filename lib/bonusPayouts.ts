@@ -1,14 +1,8 @@
 import { db } from './db';
 import { toSqliteDateTime } from './easternDay';
 import { getTierForDeposits, VIP_TIERS } from './vip';
-import {
-  BONUS_PER_DEPOSIT_CENTS,
-  MAX_BONUS_DEPOSITS,
-  MIN_QUALIFYING_DEPOSIT_CENTS,
-  listBirthdayWindows,
-  listHolidayWindows,
-  type BonusWindow,
-} from './bonuses';
+import { listBirthdayWindows, listHolidayWindows, type BonusWindow } from './bonuses';
+import { getEventWindows } from './events';
 
 // How long after a bonus week ends an unpaid bonus still shows up for the admin.
 const LOOKBACK_DAYS = 30;
@@ -19,20 +13,20 @@ export type BonusPayoutRow = {
   username: string | null;
   phone: string;
   bonusKey: string;
-  kind: 'holiday' | 'birthday';
+  kind: 'holiday' | 'birthday' | 'event';
   title: string;
   emoji: string;
   startsAt: string;
   endsAt: string;
   isActive: boolean;
   qualifyingDeposits: number;
+  maxDeposits: number;
   earnedCents: number;
   paidCents: number;
   owedCents: number;
 };
 
-const holidayMinTier = VIP_TIERS.findIndex((tier) => tier.name === 'Gold');
-const birthdayMinTier = VIP_TIERS.findIndex((tier) => tier.name === 'Jade');
+const tierIndexByName = (name: string) => VIP_TIERS.findIndex((tier) => tier.name === name);
 
 async function countQualifying(userId: string | null, window: BonusWindow) {
   const sql = `SELECT user_id, COUNT(*) AS n FROM deposits
@@ -40,7 +34,7 @@ async function countQualifying(userId: string | null, window: BonusWindow) {
                ${userId ? 'AND user_id = ?' : ''}
                GROUP BY user_id`;
   const args: Array<string | number> = [
-    MIN_QUALIFYING_DEPOSIT_CENTS,
+    window.minDepositCents,
     toSqliteDateTime(window.startUtc),
     toSqliteDateTime(window.endUtc),
   ];
@@ -52,9 +46,9 @@ async function countQualifying(userId: string | null, window: BonusWindow) {
 }
 
 /**
- * Every customer who earned (or is earning) a holiday/birthday bonus in the
- * current week or the last 30 days, with how much has been credited so far.
- * Pass `onlyUserId` + `onlyKey` to recompute a single row (used when marking paid).
+ * Every customer who earned (or is earning) a holiday, birthday or event bonus in
+ * the current week or the last 30 days, with how much has been credited so far.
+ * Pass `only` to recompute a single row (used when marking paid).
  */
 export async function getBonusPayoutRows(
   now: Date = new Date(),
@@ -81,15 +75,15 @@ export async function getBonusPayoutRows(
         phone: String(row.phone),
         birthday: row.birthday ? String(row.birthday) : null,
         birthdaySetAt: row.birthday_set_at ? String(row.birthday_set_at) : null,
-        tierIndex: VIP_TIERS.findIndex((t) => t.name === tier.name),
+        tierIndex: tierIndexByName(tier.name),
       };
     });
 
   const rows: BonusPayoutRow[] = [];
   const pushRow = (user: (typeof users)[number], window: BonusWindow, deposits: number) => {
-    if (only && window.key !== only.bonusKey) return;
-    const qualifyingDeposits = Math.min(MAX_BONUS_DEPOSITS, deposits);
-    const earnedCents = qualifyingDeposits * BONUS_PER_DEPOSIT_CENTS;
+    if (user.tierIndex < tierIndexByName(window.minTier)) return;
+    const qualifyingDeposits = Math.min(window.maxDeposits, deposits);
+    const earnedCents = qualifyingDeposits * window.perDepositCents;
     const paidCents = paid.get(`${user.id}|${window.key}`) ?? 0;
     if (earnedCents === 0 && paidCents === 0) return;
     rows.push({
@@ -105,22 +99,23 @@ export async function getBonusPayoutRows(
       endsAt: window.endUtc.toISOString(),
       isActive: window.endUtc > now,
       qualifyingDeposits,
+      maxDeposits: window.maxDeposits,
       earnedCents,
       paidCents,
       owedCents: Math.max(0, earnedCents - paidCents),
     });
   };
 
-  for (const window of listHolidayWindows(now, LOOKBACK_DAYS)) {
+  // Holidays and events apply to everyone, so one grouped query per window.
+  const sharedWindows = [...listHolidayWindows(now, LOOKBACK_DAYS), ...(await getEventWindows(now, LOOKBACK_DAYS))];
+  for (const window of sharedWindows) {
     if (only && only.bonusKey !== window.key) continue;
     const counts = await countQualifying(only?.userId ?? null, window);
-    for (const user of users) {
-      if (user.tierIndex >= holidayMinTier) pushRow(user, window, counts.get(user.id) ?? 0);
-    }
+    for (const user of users) pushRow(user, window, counts.get(user.id) ?? 0);
   }
 
+  // Birthdays are per customer.
   for (const user of users) {
-    if (user.tierIndex < birthdayMinTier) continue;
     for (const window of listBirthdayWindows(user.birthday, user.birthdaySetAt, now, LOOKBACK_DAYS)) {
       if (only && only.bonusKey !== window.key) continue;
       const counts = await countQualifying(user.id, window);

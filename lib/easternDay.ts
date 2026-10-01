@@ -50,3 +50,16 @@ export function getEasternDayRangeUtc(date: Date = new Date()): { startUtc: Date
 export function toSqliteDateTime(date: Date): string {
   return date.toISOString().replace('T', ' ').replace(/\.\d+Z$/, '');
 }
+
+/** Converts "YYYY-MM-DDTHH:mm" read as US Eastern wall-clock time into a UTC Date (null if malformed). */
+export function easternLocalToUtc(local: string): Date | null {
+  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/.exec(local);
+  if (!match) return null;
+  const [year, month, day, hour, minute] = match.slice(1).map(Number);
+  const asUtc = Date.UTC(year, month - 1, day, hour, minute);
+  // Two passes so the offset is taken at the right side of a DST change.
+  let guess = asUtc - getEasternOffsetMinutes(new Date(asUtc)) * 60000;
+  guess = asUtc - getEasternOffsetMinutes(new Date(guess)) * 60000;
+  const result = new Date(guess);
+  return Number.isNaN(result.getTime()) ? null : result;
+}

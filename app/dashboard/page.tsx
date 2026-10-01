@@ -17,6 +17,7 @@ import VIPSection from '@/components/VIPSection';
 import LogoutButton from './LogoutButton';
 import InboxClient from './InboxClient';
 import DashboardTabs, { type BonusTabEntry } from './DashboardTabs';
+import { getEventWindows } from '@/lib/events';
 import BonusTab from './BonusTab';
 import BirthdayRow from './BirthdayRow';
 import HowToDepositCard from './HowToDepositCard';
@@ -82,6 +83,8 @@ export default async function DashboardPage() {
       month: 'long',
       day: 'numeric',
     });
+    const days = Math.round((window.endUtc.getTime() - window.startUtc.getTime()) / (24 * 60 * 60 * 1000));
+    const validLabel = days === 7 ? '1 week' : `${days} day${days === 1 ? '' : 's'}`;
     bonusTabs.push({
       key,
       label: tabLabel,
@@ -93,6 +96,10 @@ export default async function DashboardPage() {
           qualifyingDeposits={progress.qualifyingDeposits}
           earnedCents={progress.earnedCents}
           endsLabel={endsLabel}
+          perDepositCents={window.perDepositCents}
+          minDepositCents={window.minDepositCents}
+          maxDeposits={window.maxDeposits}
+          validLabel={validLabel}
         />
       ),
     });
@@ -116,6 +123,18 @@ export default async function DashboardPage() {
       birthdayWindow,
       `Happy Birthday, ${user.fullName.split(' ')[0]}!`,
       'Here is your birthday bonus. Make deposits this week to earn it.'
+    );
+  }
+
+  for (const eventWindow of await getEventWindows()) {
+    const minTierIndex = VIP_TIERS.findIndex((tier) => tier.name === eventWindow.minTier);
+    if (currentTierIndex < minTierIndex) continue;
+    await addBonusTab(
+      `bonus-${eventWindow.key}`,
+      `${eventWindow.emoji} ${eventWindow.title}`,
+      eventWindow,
+      eventWindow.title,
+      eventWindow.description || 'A special event for our members. Make deposits during the event to earn a bonus.'
     );
   }
 

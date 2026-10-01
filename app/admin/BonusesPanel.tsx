@@ -96,7 +96,7 @@ export default function BonusesPanel({ onCountChange }: { onCountChange: (count:
 
       {rows.length === 0 ? (
         <div className="rounded-2xl border border-gold-600/25 bg-navy-800/60 p-8 text-center text-pearl-300/70">
-          Nobody has earned a holiday or birthday bonus in the last 30 days.
+          Nobody has earned a holiday, birthday or event bonus in the last 30 days.
         </div>
       ) : (
         <div className="space-y-3">
@@ -120,7 +120,7 @@ export default function BonusesPanel({ onCountChange }: { onCountChange: (count:
                     {row.isActive && <span className="ml-2 text-gold-400 text-xs font-semibold">STILL OPEN</span>}
                   </p>
                   <p className="text-pearl-300/60 text-sm">
-                    {row.qualifyingDeposits} of 5 deposits · earned {dollars(row.earnedCents)}
+                    {row.qualifyingDeposits} of {row.maxDeposits} deposits · earned {dollars(row.earnedCents)}
                     {row.paidCents > 0 && ` · credited ${dollars(row.paidCents)}`}
                     {' · '}
                     <a href={`sms:${row.phone}`} className="underline underline-offset-2">

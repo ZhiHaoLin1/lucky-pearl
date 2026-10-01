@@ -115,6 +115,23 @@ export function ensureSchema() {
             resolved_by_admin_id TEXT
           )`
         ),
+        // Admin-created special events with their own deposit-bonus rules.
+        db.execute(
+          `CREATE TABLE IF NOT EXISTS events (
+            id TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            emoji TEXT NOT NULL DEFAULT '🎉',
+            description TEXT,
+            starts_at TEXT NOT NULL,
+            ends_at TEXT NOT NULL,
+            bonus_per_deposit_cents INTEGER NOT NULL,
+            min_deposit_cents INTEGER NOT NULL,
+            max_deposits INTEGER NOT NULL,
+            min_tier TEXT NOT NULL,
+            created_by_admin_id TEXT,
+            created_at TEXT NOT NULL DEFAULT (datetime('now'))
+          )`
+        ),
         // Which holiday/birthday bonuses the admin has already credited, and how much.
         db.execute(
           `CREATE TABLE IF NOT EXISTS bonus_payouts (
