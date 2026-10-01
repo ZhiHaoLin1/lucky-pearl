@@ -1,10 +1,11 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { AlertTriangle, AtSign, Check, Mail, MailWarning, Megaphone, Pencil, Phone, Send, Trash2, Users } from 'lucide-react';
+import { AlertTriangle, AtSign, Check, Gift, Mail, MailWarning, Megaphone, Pencil, Phone, Send, Trash2, Users } from 'lucide-react';
 import AdminFinancePanel from './AdminFinancePanel';
 import SquareQueuePanel from './SquareQueuePanel';
 import EmailQueuePanel from './EmailQueuePanel';
+import BonusesPanel from './BonusesPanel';
 
 export type AdminCustomer = {
   id: string;
@@ -33,10 +34,12 @@ export default function AdminDashboardClient({
   customers: initialCustomers,
   initialSquareQueueCount = 0,
   initialEmailQueueCount = 0,
+  initialBonusOwedCount = 0,
 }: {
   customers: AdminCustomer[];
   initialSquareQueueCount?: number;
   initialEmailQueueCount?: number;
+  initialBonusOwedCount?: number;
 }) {
   const [customers, setCustomers] = useState(initialCustomers);
   const [checkedIds, setCheckedIds] = useState<Set<string>>(new Set());
@@ -48,12 +51,13 @@ export default function AdminDashboardClient({
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [detailTab, setDetailTab] = useState<'messages' | 'finance'>('messages');
-  const [view, setView] = useState<'customers' | 'broadcast' | 'square' | 'email'>('customers');
+  const [view, setView] = useState<'customers' | 'broadcast' | 'square' | 'email' | 'bonuses'>('customers');
   const [broadcastBody, setBroadcastBody] = useState('');
   const [isBroadcasting, setIsBroadcasting] = useState(false);
   const [broadcastMessage, setBroadcastMessage] = useState<string | null>(null);
   const [squareQueueCount, setSquareQueueCount] = useState(initialSquareQueueCount);
   const [emailQueueCount, setEmailQueueCount] = useState(initialEmailQueueCount);
+  const [bonusOwedCount, setBonusOwedCount] = useState(initialBonusOwedCount);
   const [isEditingUsername, setIsEditingUsername] = useState(false);
   const [usernameDraft, setUsernameDraft] = useState('');
   const [isSavingUsername, setIsSavingUsername] = useState(false);
@@ -263,7 +267,7 @@ export default function AdminDashboardClient({
   return (
     <div>
       <div className="flex gap-2 mb-5 border-b border-white/10 overflow-x-auto overflow-y-hidden">
-        {(['customers', 'broadcast', 'square', 'email'] as const).map((key) => (
+        {(['customers', 'broadcast', 'square', 'email', 'bonuses'] as const).map((key) => (
           <button
             key={key}
             type="button"
@@ -278,16 +282,24 @@ export default function AdminDashboardClient({
             {key === 'broadcast' && <Megaphone className="w-4 h-4" />}
             {key === 'square' && <AlertTriangle className="w-4 h-4" />}
             {key === 'email' && <MailWarning className="w-4 h-4" />}
+            {key === 'bonuses' && <Gift className="w-4 h-4" />}
             {key === 'customers'
               ? 'Customers'
               : key === 'broadcast'
               ? 'Mass Message'
               : key === 'square'
               ? 'Square Queue'
-              : 'Email Queue'}
+              : key === 'email'
+              ? 'Email Queue'
+              : 'Bonuses'}
             {key === 'square' && squareQueueCount > 0 && (
               <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-gold-500/20 text-gold-400">
                 {squareQueueCount}
+              </span>
+            )}
+            {key === 'bonuses' && bonusOwedCount > 0 && (
+              <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-gold-500/20 text-gold-400">
+                {bonusOwedCount}
               </span>
             )}
             {key === 'email' && emailQueueCount > 0 && (
@@ -373,6 +385,8 @@ export default function AdminDashboardClient({
         <SquareQueuePanel customers={customers} onCountChange={setSquareQueueCount} />
       ) : view === 'email' ? (
         <EmailQueuePanel customers={customers} onCountChange={setEmailQueueCount} />
+      ) : view === 'bonuses' ? (
+        <BonusesPanel onCountChange={setBonusOwedCount} />
       ) : (
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-1 rounded-2xl border border-gold-600/25 bg-navy-800/60 overflow-hidden">

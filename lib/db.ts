@@ -115,6 +115,17 @@ export function ensureSchema() {
             resolved_by_admin_id TEXT
           )`
         ),
+        // Which holiday/birthday bonuses the admin has already credited, and how much.
+        db.execute(
+          `CREATE TABLE IF NOT EXISTS bonus_payouts (
+            user_id TEXT NOT NULL,
+            bonus_key TEXT NOT NULL,
+            paid_cents INTEGER NOT NULL DEFAULT 0,
+            paid_at TEXT,
+            paid_by_admin_id TEXT,
+            PRIMARY KEY (user_id, bonus_key)
+          )`
+        ),
         db.execute(
           `CREATE TABLE IF NOT EXISTS withdrawals (
             id TEXT PRIMARY KEY,

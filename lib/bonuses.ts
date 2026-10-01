@@ -56,6 +56,8 @@ function holidaysForYear(year: number): Holiday[] {
 }
 
 export type BonusWindow = {
+  // Stable id for payout tracking, e.g. "holiday:2026-07-04" or "birthday:2026-03-05".
+  key: string;
   kind: 'holiday' | 'birthday';
   title: string;
   emoji: string;
@@ -77,18 +79,39 @@ function easternYear(now: Date): number {
   return Number(new Intl.DateTimeFormat('en-US', { timeZone: EASTERN_TIMEZONE, year: 'numeric' }).format(now));
 }
 
-/** The holiday bonus window we're in right now (holiday + the following 6 days), if any. */
-export function getActiveHolidayWindow(now: Date = new Date()): BonusWindow | null {
+function ymdKey({ year, month, day }: Ymd): string {
+  return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+}
+
+/**
+ * Holiday windows that have started and haven't ended more than `lookbackDays`
+ * ago. With lookbackDays = 0 that is just the window open right now (if any).
+ */
+export function listHolidayWindows(now: Date = new Date(), lookbackDays = 0): BonusWindow[] {
+  const cutoff = now.getTime() - lookbackDays * 24 * 60 * 60 * 1000;
   const year = easternYear(now);
+  const windows: BonusWindow[] = [];
   for (const y of [year - 1, year]) {
     for (const holiday of holidaysForYear(y)) {
       const { startUtc, endUtc } = windowStartingOn(holiday.date);
-      if (now >= startUtc && now < endUtc) {
-        return { kind: 'holiday', title: holiday.name, emoji: holiday.emoji, startUtc, endUtc };
+      if (now >= startUtc && endUtc.getTime() > cutoff) {
+        windows.push({
+          key: `holiday:${ymdKey(holiday.date)}`,
+          kind: 'holiday',
+          title: holiday.name,
+          emoji: holiday.emoji,
+          startUtc,
+          endUtc,
+        });
       }
     }
   }
-  return null;
+  return windows;
+}
+
+/** The holiday bonus window we're in right now (holiday + the following 6 days), if any. */
+export function getActiveHolidayWindow(now: Date = new Date()): BonusWindow | null {
+  return listHolidayWindows(now, 0)[0] ?? null;
 }
 
 function isLeapYear(year: number) {
@@ -96,32 +119,53 @@ function isLeapYear(year: number) {
 }
 
 /**
- * The birthday bonus window we're in right now, if any. `birthday` is "MM-DD".
- * The birthday has to have been saved before the window opens, so signing up
- * (or entering a birthday) on the day itself doesn't qualify until next year.
+ * Birthday windows (`birthday` is "MM-DD") that have started and haven't ended
+ * more than `lookbackDays` ago. The birthday has to have been saved before the
+ * window opens, so signing up (or entering a birthday) on the day itself
+ * doesn't qualify until next year.
  */
+export function listBirthdayWindows(
+  birthday: string | null,
+  birthdaySetAt: string | null,
+  now: Date = new Date(),
+  lookbackDays = 0
+): BonusWindow[] {
+  if (!birthday || !birthdaySetAt) return [];
+  const match = /^(\d{2})-(\d{2})$/.exec(birthday);
+  if (!match) return [];
+  const month = Number(match[1]);
+  const rawDay = Number(match[2]);
+  const setAt = new Date(birthdaySetAt.replace(' ', 'T') + 'Z');
+  const cutoff = now.getTime() - lookbackDays * 24 * 60 * 60 * 1000;
+
+  const year = easternYear(now);
+  const windows: BonusWindow[] = [];
+  for (const y of [year - 1, year]) {
+    // Feb 29 birthdays are celebrated on Feb 28 in non-leap years.
+    const day = month === 2 && rawDay === 29 && !isLeapYear(y) ? 28 : rawDay;
+    const date = { year: y, month, day };
+    const { startUtc, endUtc } = windowStartingOn(date);
+    if (now >= startUtc && endUtc.getTime() > cutoff && setAt <= startUtc) {
+      windows.push({
+        key: `birthday:${ymdKey(date)}`,
+        kind: 'birthday',
+        title: 'Birthday Bonus',
+        emoji: '\u{1F382}',
+        startUtc,
+        endUtc,
+      });
+    }
+  }
+  return windows;
+}
+
+/** The birthday bonus window we're in right now, if any. */
 export function getActiveBirthdayWindow(
   birthday: string | null,
   birthdaySetAt: string | null,
   now: Date = new Date()
 ): BonusWindow | null {
-  if (!birthday || !birthdaySetAt) return null;
-  const match = /^(\d{2})-(\d{2})$/.exec(birthday);
-  if (!match) return null;
-  const month = Number(match[1]);
-  const rawDay = Number(match[2]);
-  const setAt = new Date(birthdaySetAt.replace(' ', 'T') + 'Z');
-
-  const year = easternYear(now);
-  for (const y of [year - 1, year]) {
-    // Feb 29 birthdays are celebrated on Feb 28 in non-leap years.
-    const day = month === 2 && rawDay === 29 && !isLeapYear(y) ? 28 : rawDay;
-    const { startUtc, endUtc } = windowStartingOn({ year: y, month, day });
-    if (now >= startUtc && now < endUtc && setAt <= startUtc) {
-      return { kind: 'birthday', title: 'Birthday Bonus', emoji: '🎂', startUtc, endUtc };
-    }
-  }
-  return null;
+  return listBirthdayWindows(birthday, birthdaySetAt, now, 0)[0] ?? null;
 }
 
 export type BonusProgress = { qualifyingDeposits: number; earnedCents: number };

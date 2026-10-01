@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import { Gem } from 'lucide-react';
 import { getSessionUser } from '@/lib/auth';
 import { db, ensureSchema } from '@/lib/db';
+import { getBonusPayoutRows } from '@/lib/bonusPayouts';
 import LogoutButton from '@/app/dashboard/LogoutButton';
 import AdminDashboardClient, { type AdminCustomer } from './AdminDashboardClient';
 
@@ -51,6 +52,8 @@ export default async function AdminPage() {
   );
   const emailQueueCount = Number(emailQueueResult.rows[0]?.c ?? 0);
 
+  const bonusOwedCount = (await getBonusPayoutRows()).filter((row) => row.owedCents > 0).length;
+
   return (
     <main
       className="min-h-screen pb-20"
@@ -88,6 +91,7 @@ export default async function AdminPage() {
           customers={customers}
           initialSquareQueueCount={squareQueueCount}
           initialEmailQueueCount={emailQueueCount}
+          initialBonusOwedCount={bonusOwedCount}
         />
       </div>
     </main>
