@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Menu, X, Gem, Gamepad2, Wallet, Headphones, LogIn } from 'lucide-react';
+import { Menu, X, Gem, Gamepad2, Wallet, MessageCircle, LogIn } from 'lucide-react';
 import Turnstile, { type TurnstileHandle } from './Turnstile';
 import BirthdaySelect from './BirthdaySelect';
 
@@ -18,13 +18,14 @@ const navLinks = [
 const mobileQuickLinks = [
   { label: 'Games', href: '#games', icon: Gamepad2 },
   { label: 'Pay', href: '#payments', icon: Wallet },
-  { label: 'Help', href: '#support', icon: Headphones },
 ];
 
 export default function Navbar() {
   const router = useRouter();
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  // Unread chat replies, broadcast by the site-wide ChatWidget.
+  const [chatUnread, setChatUnread] = useState(0);
 
   const [authLoading, setAuthLoading] = useState(true);
   const [loggedIn, setLoggedIn] = useState(false);
@@ -55,6 +56,14 @@ export default function Navbar() {
   const [isSendingReset, setIsSendingReset] = useState(false);
   const [forgotMessage, setForgotMessage] = useState<string | null>(null);
   const [forgotEmail, setForgotEmail] = useState('');
+
+  useEffect(() => {
+    const initial = (window as unknown as { __lpChatUnread?: number }).__lpChatUnread;
+    if (typeof initial === 'number') setChatUnread(initial);
+    const onUnread = (event: Event) => setChatUnread(Number((event as CustomEvent).detail) || 0);
+    window.addEventListener('lp-chat-unread', onUnread);
+    return () => window.removeEventListener('lp-chat-unread', onUnread);
+  }, []);
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 40);
@@ -661,6 +670,23 @@ export default function Navbar() {
               <span className="text-xs font-semibold">{item.label}</span>
             </a>
           ))}
+          {/* The "Help" tab opens the chat. It's styled to stand out so customers notice it. */}
+          <button
+            type="button"
+            onClick={() => window.dispatchEvent(new Event('lp-chat-open'))}
+            aria-label={chatUnread > 0 ? `Open help chat, ${chatUnread} new` : 'Open help chat'}
+            className="relative flex flex-col items-center justify-center gap-1 min-h-[64px] py-2 text-gold-400 active:bg-gold-500/10"
+          >
+            <span className="relative flex items-center justify-center w-10 h-10 -mt-3 rounded-full bg-gold-gradient text-navy-900 shadow-[0_0_18px_rgba(212,175,55,0.55)] ring-2 ring-navy-900 animate-pulse-gold">
+              <MessageCircle className="w-5 h-5" aria-hidden />
+              {chatUnread > 0 && (
+                <span className="absolute -top-1 -right-1 min-w-[1.1rem] h-[1.1rem] px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">
+                  {chatUnread}
+                </span>
+              )}
+            </span>
+            <span className="text-xs font-bold">Help</span>
+          </button>
           {!authLoading && !loggedIn && (
             <button
               type="button"

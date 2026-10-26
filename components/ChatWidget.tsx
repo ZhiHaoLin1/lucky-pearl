@@ -66,6 +66,18 @@ export default function ChatWidget() {
   const openRef = useRef(false);
   openRef.current = open;
 
+  // Other parts of the page (the mobile "Help" tab) can open the chat with this event.
+  useEffect(() => {
+    const openFromElsewhere = () => {
+      setOpen(true);
+      try {
+        localStorage.setItem(OPEN_KEY, '1');
+      } catch {}
+    };
+    window.addEventListener('lp-chat-open', openFromElsewhere);
+    return () => window.removeEventListener('lp-chat-open', openFromElsewhere);
+  }, []);
+
   // Restore open state + unsent draft.
   useEffect(() => {
     try {
@@ -187,9 +199,19 @@ export default function ChatWidget() {
     }
   };
 
+  const unreadCount = messages.filter((message) => message.unread).length;
+
+  // Let the navbar's Help tab show the same unread badge.
+  useEffect(() => {
+    (window as unknown as { __lpChatUnread?: number }).__lpChatUnread = unreadCount;
+    window.dispatchEvent(new CustomEvent('lp-chat-unread', { detail: unreadCount }));
+  }, [unreadCount]);
+
   if (!active) return null;
 
-  const unreadCount = messages.filter((message) => message.unread).length;
+  // On the home page phones/tablets have a bottom nav bar whose Help tab opens the chat,
+  // so the floating bubble would just overlap it there.
+  const bubbleHiddenBelowLg = pathname === '/';
 
   return (
     <>
@@ -291,7 +313,7 @@ export default function ChatWidget() {
         aria-label={open ? 'Close chat' : unreadCount > 0 ? `Open chat, ${unreadCount} new` : 'Open chat'}
         className={`fixed z-40 right-4 w-14 h-14 rounded-full bg-gold-gradient text-navy-900 shadow-[0_6px_24px_rgba(0,0,0,0.5)] flex items-center justify-center transition-transform hover:scale-105 ${
           open ? 'hidden sm:flex' : ''
-        } ${!open && unreadCount > 0 ? 'animate-pulse-gold' : ''}`}
+        } ${bubbleHiddenBelowLg ? 'max-lg:hidden' : ''} ${!open && unreadCount > 0 ? 'animate-pulse-gold' : ''}`}
         style={{ bottom: 'max(1rem, env(safe-area-inset-bottom))' }}
       >
         {open ? <X className="w-6 h-6" /> : <MessageCircle className="w-6 h-6" />}
