@@ -2,6 +2,7 @@ import { randomUUID } from 'crypto';
 import { NextResponse } from 'next/server';
 import { db, ensureSchema } from '@/lib/db';
 import { getSessionUser } from '@/lib/auth';
+import { getCashoutLock } from '@/lib/referrals';
 import { getFinanceSummary } from '@/lib/finance';
 import { getNextTier, formatCents } from '@/lib/vip';
 import { WITHDRAWAL_METHODS, isWithdrawalMethod, computeFeeCents } from '@/lib/withdrawalMethods';
@@ -43,6 +44,11 @@ export async function POST(request: Request) {
   const sessionUser = await getSessionUser();
   if (!sessionUser) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const cashoutLock = await getCashoutLock(sessionUser.id);
+  if (cashoutLock.locked) {
+    return NextResponse.json({ error: cashoutLock.message }, { status: 403 });
   }
 
   try {

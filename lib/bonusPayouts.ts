@@ -86,7 +86,7 @@ export async function getBonusPayoutRows(
     });
 
   const rows: BonusPayoutRow[] = [];
-  const { byUser: duplicateByUser } = await getOpenDuplicateGroups();
+  const { byUser: duplicateByUser, strongByUser } = await getOpenDuplicateGroups();
   const pushRow = (user: (typeof users)[number], window: BonusWindow, deposits: number) => {
     if (user.tierIndex < tierIndexByName(window.minTier)) return;
     // New accounts don't qualify (unless a payout was already recorded for them).
@@ -113,13 +113,11 @@ export async function getBonusPayoutRows(
       paidCents,
       owedCents: Math.max(0, earnedCents - paidCents),
       blockedReason: (() => {
-        const group = duplicateByUser.get(user.id);
-        if (!group || group.strength !== 'strong') return null;
-        const paidTo = group.accounts.filter(
-          (account) => account.id !== user.id && (paid.get(`${account.id}|${window.key}`) ?? 0) > 0
-        );
+        const links = strongByUser.get(user.id);
+        if (!links) return null;
+        const paidTo = links.accounts.filter((account) => (paid.get(`${account.id}|${window.key}`) ?? 0) > 0);
         return paidTo.length > 0
-          ? `Already paid to a linked account: ${paidTo.map((account) => account.fullName).join(', ')} (${group.reasons.join('; ')})`
+          ? `Already paid to a linked account: ${paidTo.map((account) => account.fullName).join(', ')} (${links.reasons.join('; ')})`
           : null;
       })(),
       duplicateWarning: (() => {

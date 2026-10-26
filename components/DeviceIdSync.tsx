@@ -9,6 +9,7 @@ const SYNCED_KEY = 'lp-device-synced';
 // cookies alone doesn't make a returning browser look new. Runs once per tab session.
 export default function DeviceIdSync() {
   useEffect(() => {
+    if (window.location.hostname.startsWith('referral.')) return; // device ids belong to the main site
     try {
       if (sessionStorage.getItem(SYNCED_KEY)) return;
       sessionStorage.setItem(SYNCED_KEY, '1');

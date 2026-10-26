@@ -107,7 +107,9 @@ export default function ChatWidget() {
     };
   }, [pathname]);
 
-  const hidden = HIDDEN_PATH_PREFIXES.some((prefix) => pathname?.startsWith(prefix));
+  // The separate referral site (referral.*) has no chat.
+  const onReferralSite = typeof window !== 'undefined' && window.location.hostname.startsWith('referral.');
+  const hidden = onReferralSite || HIDDEN_PATH_PREFIXES.some((prefix) => pathname?.startsWith(prefix));
   const active = enabled && !hidden;
 
   // Opening the chat reads (and marks as read); while closed we only peek so the unread badge works.

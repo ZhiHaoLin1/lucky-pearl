@@ -19,6 +19,7 @@ const DEVICE_TOKEN_PATTERN = /^[a-f0-9]{48}$/;
 const DEVICE_MAX_AGE_SECONDS = 60 * 60 * 24 * 365 * 2;
 
 const hashKey = () => process.env.SESSION_SECRET ?? 'dev-insecure-secret-change-me';
+export const hashForMatching = (value: string) => keyedHash(value);
 const keyedHash = (value: string) => createHmac('sha256', hashKey()).update(value).digest('hex').slice(0, 32);
 
 export function clientIp(request: Request): string | null {
@@ -170,6 +171,9 @@ export type DuplicateGroup = {
   strength: 'strong' | 'medium';
   accounts: DuplicateAccount[];
   reasons: string[];
+  // Accounts that are directly tied to each member by a strong signal (phone, email, device,
+  // payout destination...). Used for blocking payments: sharing a group alone is not enough.
+  strongLinks: Record<string, { accountIds: string[]; reasons: string[] }>;
 };
 
 type Edge = { a: string; b: string; reason: string; strong: boolean };
@@ -299,6 +303,17 @@ export async function findDuplicateGroups(): Promise<DuplicateGroup[]> {
       strength: groupEdges.some((edge) => edge.strong) ? 'strong' : 'medium',
       accounts: ids.map((id) => userById.get(id)).filter((u): u is NonNullable<typeof u> => Boolean(u)).map(({ birthday: _b, ...rest }) => rest),
       reasons: Array.from(new Set(groupEdges.map((edge) => edge.reason))),
+      strongLinks: (() => {
+        const links: Record<string, { accountIds: string[]; reasons: string[] }> = {};
+        for (const edge of groupEdges.filter((e) => e.strong)) {
+          for (const [self, other] of [[edge.a, edge.b], [edge.b, edge.a]]) {
+            const entry = (links[self] ??= { accountIds: [], reasons: [] });
+            if (!entry.accountIds.includes(other)) entry.accountIds.push(other);
+            if (!entry.reasons.includes(edge.reason)) entry.reasons.push(edge.reason);
+          }
+        }
+        return links;
+      })(),
     });
   }
 
@@ -317,6 +332,20 @@ export async function getOpenDuplicateGroups() {
   const [groups, reviewed] = await Promise.all([findDuplicateGroups(), getReviewedKeys()]);
   const open = groups.filter((group) => !reviewed.has(group.key));
   const byUser = new Map<string, DuplicateGroup>();
-  for (const group of open) for (const account of group.accounts) byUser.set(account.id, group);
-  return { open, byUser };
+  // Per account: the other accounts it is strongly tied to (only these can block a payment).
+  const strongByUser = new Map<string, { accounts: DuplicateAccount[]; reasons: string[] }>();
+  for (const group of open) {
+    const accountById = new Map(group.accounts.map((account) => [account.id, account]));
+    for (const account of group.accounts) {
+      byUser.set(account.id, group);
+      const link = group.strongLinks[account.id];
+      if (link) {
+        strongByUser.set(account.id, {
+          accounts: link.accountIds.map((id) => accountById.get(id)).filter((a): a is DuplicateAccount => Boolean(a)),
+          reasons: link.reasons,
+        });
+      }
+    }
+  }
+  return { open, byUser, strongByUser };
 }

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { db, ensureSchema } from '@/lib/db';
 import { getSessionUser } from '@/lib/auth';
+import { rememberIdentity } from '@/lib/referrals';
 
 export async function PATCH(request: Request) {
   const sessionUser = await getSessionUser();
@@ -65,6 +66,9 @@ export async function DELETE(request: Request) {
     }
 
     await ensureSchema();
+
+    // Remember who they were, so a deleted account can't come back as a "new" referral.
+    for (const id of ids) await rememberIdentity(id);
 
     const statements = ids.flatMap((id) => [
       { sql: 'DELETE FROM messages WHERE user_id = ?', args: [id] },

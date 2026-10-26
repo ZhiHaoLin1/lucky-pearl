@@ -4,7 +4,16 @@ import { NextResponse } from 'next/server';
 import { db, ensureSchema } from '@/lib/db';
 import { attachSessionCookie } from '@/lib/auth';
 import { claimGuestMessages } from '@/lib/chat';
-import { recordAccountSignals } from '@/lib/accountSignals';
+import { recordAccountSignals, clientIp, DEVICE_COOKIE, isValidDeviceId } from '@/lib/accountSignals';
+import { cookies } from 'next/headers';
+import {
+  createReferralRecord,
+  evaluateReferralSignup,
+  getActiveLink,
+  normalizeReferralCode,
+  rememberIdentity,
+  type Verdict,
+} from '@/lib/referrals';
 import { verifyTurnstileToken } from '@/lib/turnstile';
 import { isValidBirthday } from '@/lib/bonuses';
 
@@ -16,6 +25,8 @@ type SignupPayload = {
   password?: string;
   birthMonth?: string | number;
   birthDay?: string | number;
+  refCode?: string;
+  adultConfirmed?: boolean;
   turnstileToken?: string;
 };
 
@@ -81,6 +92,25 @@ export async function POST(request: Request) {
       );
     }
 
+    // Referral: decided BEFORE the account exists, so the new account can't match itself.
+    const refCode = normalizeReferralCode(body.refCode);
+    const referralLink = refCode ? await getActiveLink(refCode) : null;
+    const adultConfirmed = body.adultConfirmed === true;
+    let referralVerdict: Verdict | null = null;
+    if (referralLink) {
+      const deviceCookie = cookies().get(DEVICE_COOKIE)?.value;
+      referralVerdict = await evaluateReferralSignup({
+        referrerUserId: referralLink.referrerUserId,
+        fullName,
+        email,
+        phone,
+        adultConfirmed,
+        deviceId: isValidDeviceId(deviceCookie) ? deviceCookie : null,
+        ip: clientIp(request),
+        userAgent: request.headers.get('user-agent'),
+      });
+    }
+
     const passwordHash = await bcrypt.hash(password, 10);
     const id = randomUUID();
 
@@ -89,6 +119,11 @@ export async function POST(request: Request) {
             VALUES (?, ?, ?, ?, ?, ?, ?, ${birthday ? "datetime('now')" : 'NULL'})`,
       args: [id, fullName, email, phone, preferredGame || null, passwordHash, birthday],
     });
+
+    await rememberIdentity(id);
+    if (referralLink && referralVerdict) {
+      await createReferralRecord({ refereeUserId: id, link: referralLink, adultConfirmed, verdict: referralVerdict });
+    }
 
     const webhookUrl = process.env.DISCORD_WEBHOOK_URL;
     if (webhookUrl) {
@@ -102,6 +137,9 @@ export async function POST(request: Request) {
             `Email: ${email}`,
             `Phone: ${phone}`,
             `Preferred game: ${preferredGame || 'Not provided'}`,
+            ...(referralLink && referralVerdict
+              ? [`Referral: invited by ${referralLink.referrerFirstName} (${referralVerdict.eligibility}${referralVerdict.reason ? ': ' + referralVerdict.reason : ''})`]
+              : []),
           ].join('\n'),
         }),
       }).catch(() => {});

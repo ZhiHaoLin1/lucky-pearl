@@ -141,6 +141,54 @@ export function ensureSchema() {
             resolved_by_admin_id TEXT
           )`
         ),
+        // Referral campaign: one link per customer, visits to the landing page, and each referred signup.
+        db.execute(
+          `CREATE TABLE IF NOT EXISTS referral_links (
+            id TEXT PRIMARY KEY,
+            code TEXT NOT NULL UNIQUE,
+            referrer_user_id TEXT NOT NULL,
+            label TEXT,
+            active INTEGER NOT NULL DEFAULT 1,
+            created_by_admin_id TEXT,
+            created_at TEXT NOT NULL DEFAULT (datetime('now'))
+          )`
+        ),
+        db.execute(
+          `CREATE TABLE IF NOT EXISTS referral_visits (
+            id TEXT PRIMARY KEY,
+            link_id TEXT NOT NULL,
+            visitor_id TEXT NOT NULL,
+            created_at TEXT NOT NULL DEFAULT (datetime('now'))
+          )`
+        ),
+        db.execute(
+          `CREATE TABLE IF NOT EXISTS referrals (
+            id TEXT PRIMARY KEY,
+            referee_user_id TEXT NOT NULL UNIQUE,
+            link_id TEXT NOT NULL,
+            referrer_user_id TEXT NOT NULL,
+            adult_confirmed INTEGER NOT NULL DEFAULT 0,
+            eligibility TEXT NOT NULL,
+            eligibility_reason TEXT,
+            reviewed_by_admin_id TEXT,
+            reviewed_at TEXT,
+            referee_credit_given_at TEXT,
+            referee_credit_given_by TEXT,
+            referrer_paid_at TEXT,
+            referrer_paid_by TEXT,
+            created_at TEXT NOT NULL DEFAULT (datetime('now'))
+          )`
+        ),
+        // Scrambled phone/email of every account ever created (kept after deletion) so past customers can't pose as new.
+        db.execute(
+          `CREATE TABLE IF NOT EXISTS identity_history (
+            kind TEXT NOT NULL,
+            value_hash TEXT NOT NULL,
+            user_id TEXT NOT NULL,
+            created_at TEXT NOT NULL DEFAULT (datetime('now')),
+            PRIMARY KEY (kind, value_hash, user_id)
+          )`
+        ),
         // Devices / networks each account has logged in or signed up from (hashed), for spotting duplicates.
         db.execute(
           `CREATE TABLE IF NOT EXISTS account_devices (

@@ -5,6 +5,7 @@ import { getSessionUser } from '@/lib/auth';
 import { db, ensureSchema } from '@/lib/db';
 import { getBonusPayoutRows } from '@/lib/bonusPayouts';
 import { getOpenDuplicateGroups } from '@/lib/accountSignals';
+import { countReferralActions, getReferralOverview } from '@/lib/referrals';
 import LogoutButton from '@/app/dashboard/LogoutButton';
 import AdminDashboardClient, { type AdminCustomer } from './AdminDashboardClient';
 
@@ -53,6 +54,7 @@ export default async function AdminPage() {
   );
   const emailQueueCount = Number(emailQueueResult.rows[0]?.c ?? 0);
 
+  const referralCount = countReferralActions((await getReferralOverview()).referrals);
   const duplicateCount = (await getOpenDuplicateGroups()).open.length;
   const bonusOwedCount = (await getBonusPayoutRows()).filter((row) => row.owedCents > 0 && !row.blockedReason).length;
 
@@ -95,6 +97,7 @@ export default async function AdminPage() {
           initialEmailQueueCount={emailQueueCount}
           initialBonusOwedCount={bonusOwedCount}
           initialDuplicateCount={duplicateCount}
+          initialReferralCount={referralCount}
         />
       </div>
     </main>

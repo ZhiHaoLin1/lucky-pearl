@@ -46,6 +46,9 @@ export default function Navbar() {
   });
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const turnstileRef = useRef<TurnstileHandle>(null);
+  // Set when the visitor arrived through a friend's referral link.
+  const [referral, setReferral] = useState<{ code: string; firstName: string } | null>(null);
+  const [adultConfirmed, setAdultConfirmed] = useState(false);
 
   const [loginOpen, setLoginOpen] = useState(false);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
@@ -102,6 +105,39 @@ export default function Navbar() {
     return () => window.removeEventListener('lp-open-join', onOpenJoin);
   }, []);
 
+  // Referral links arrive as /?ref=CODE. Remember the code for 30 days, open the join form,
+  // and ask the server whose invite it is so the form can say so.
+  useEffect(() => {
+    const REF_KEY = 'lp-ref';
+    const fromUrl = (new URLSearchParams(window.location.search).get('ref') ?? '').trim().toUpperCase();
+    if (/^[A-Z2-9]{8}$/.test(fromUrl)) {
+      try {
+        localStorage.setItem(REF_KEY, JSON.stringify({ code: fromUrl, savedAt: Date.now() }));
+      } catch {}
+      window.dispatchEvent(new CustomEvent('lp-open-join'));
+      router.replace('/', { scroll: false });
+    }
+
+    let stored: { code?: string; savedAt?: number } | null = null;
+    try {
+      stored = JSON.parse(localStorage.getItem(REF_KEY) || 'null');
+    } catch {}
+    if (!stored?.code || !stored.savedAt || Date.now() - stored.savedAt > 30 * 24 * 60 * 60 * 1000) return;
+    const code = stored.code;
+    fetch(`/api/referrals/lookup?code=${encodeURIComponent(code)}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data?.valid) setReferral({ code, firstName: String(data.firstName || 'a friend') });
+        else {
+          try {
+            localStorage.removeItem(REF_KEY);
+          } catch {}
+        }
+      })
+      .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   useEffect(() => {
     if (new URLSearchParams(window.location.search).get('join') === '1') {
       window.dispatchEvent(new CustomEvent('lp-open-join'));
@@ -139,6 +175,10 @@ export default function Navbar() {
       setSubmitMessage('Password must be at least 8 characters.');
       return;
     }
+    if (referral && !adultConfirmed) {
+      setSubmitMessage('Please confirm you are 18 or older to use a friend’s invite.');
+      return;
+    }
     if (!turnstileToken) {
       setSubmitMessage('Please complete the verification challenge.');
       return;
@@ -149,7 +189,7 @@ export default function Navbar() {
       const response = await fetch('/api/auth/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...formData, turnstileToken }),
+        body: JSON.stringify({ ...formData, turnstileToken, refCode: referral?.code, adultConfirmed }),
       });
 
       const data = await response.json();
@@ -168,6 +208,10 @@ export default function Navbar() {
         password: '',
         confirmPassword: '',
       });
+      try {
+        localStorage.removeItem('lp-ref');
+      } catch {}
+      setReferral(null);
       setLoggedIn(true);
       router.push('/dashboard');
     } catch (error) {
@@ -392,6 +436,13 @@ export default function Navbar() {
                 Create your account to get instant access to your dashboard and games.
               </p>
 
+              {referral && (
+                <div className="mb-5 rounded-xl border border-gold-500/40 bg-gold-500/10 px-4 py-3 text-sm text-pearl-100">
+                  🎁 <span className="font-semibold text-gold-400">{referral.firstName}</span> invited you. Sign up to get $10 in free game
+                  credit.
+                </div>
+              )}
+
               <form onSubmit={handleJoinSubmit} className="space-y-4">
                 <label className="block">
                   <span className="text-pearl-200 text-sm font-medium mb-1.5 block">Full name</span>
@@ -472,6 +523,18 @@ export default function Navbar() {
                     className="w-full rounded-xl bg-navy-900 border border-gold-600/25 px-4 py-3.5 text-base text-pearl-100 focus:border-gold-400 focus:outline-none focus:ring-2 focus:ring-gold-400/30"
                   />
                 </label>
+
+                {referral && (
+                  <label className="flex items-start gap-3 text-sm text-pearl-200">
+                    <input
+                      type="checkbox"
+                      checked={adultConfirmed}
+                      onChange={(event) => setAdultConfirmed(event.target.checked)}
+                      className="mt-1 w-5 h-5 accent-yellow-500 shrink-0"
+                    />
+                    <span>I confirm I am 18 or older and have never had a Lucky Pearl account.</span>
+                  </label>
+                )}
 
                 {TURNSTILE_SITE_KEY && (
                   <div className="flex justify-center">

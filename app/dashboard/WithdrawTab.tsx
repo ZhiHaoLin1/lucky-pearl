@@ -33,6 +33,8 @@ export type WithdrawTabProps = {
   todaysWithdrawnCents: number;
   remainingTodayCents: number;
   initialWithdrawals: WithdrawalRow[];
+  // Set while a referred customer hasn't made their first real purchase.
+  cashoutLockMessage?: string | null;
 };
 
 function formatCents(cents: number) {
@@ -63,6 +65,7 @@ export default function WithdrawTab({
   todaysWithdrawnCents,
   remainingTodayCents,
   initialWithdrawals,
+  cashoutLockMessage = null,
 }: WithdrawTabProps) {
   const [withdrawals, setWithdrawals] = useState(initialWithdrawals);
   const [used, setUsed] = useState(todaysWithdrawnCents);
@@ -227,6 +230,12 @@ export default function WithdrawTab({
           </h2>
         </div>
 
+        {cashoutLockMessage && (
+          <div className="mb-4 rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
+            🔒 {cashoutLockMessage}
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="space-y-4 mb-3">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {METHOD_KEYS.map((key) => {
@@ -292,7 +301,7 @@ export default function WithdrawTab({
             </div>
             <button
               type="submit"
-              disabled={isSubmitting || remaining <= 0 || belowMinimum}
+              disabled={isSubmitting || remaining <= 0 || belowMinimum || Boolean(cashoutLockMessage)}
               className="shrink-0 px-6 py-3.5 rounded-xl bg-gold-gradient text-navy-900 font-bold disabled:opacity-60"
             >
               {isSubmitting ? 'Submitting…' : 'Request Withdrawal'}
