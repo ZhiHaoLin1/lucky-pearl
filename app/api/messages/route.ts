@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 import { db, ensureSchema } from '@/lib/db';
 import { getSessionUser } from '@/lib/auth';
 
-export async function GET() {
+export async function GET(request: Request) {
   const sessionUser = await getSessionUser();
   if (!sessionUser) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -11,10 +11,15 @@ export async function GET() {
 
   await ensureSchema();
 
-  await db.execute({
-    sql: "UPDATE messages SET read_at = datetime('now') WHERE user_id = ? AND sender_admin_id IS NOT NULL AND read_at IS NULL",
-    args: [sessionUser.id],
-  });
+  // The chat bubble polls with ?peek=1 while closed so its unread badge works;
+  // only a real open of the inbox/chat marks support replies as read.
+  const peek = new URL(request.url).searchParams.get('peek') === '1';
+  if (!peek) {
+    await db.execute({
+      sql: "UPDATE messages SET read_at = datetime('now') WHERE user_id = ? AND sender_admin_id IS NOT NULL AND read_at IS NULL",
+      args: [sessionUser.id],
+    });
+  }
 
   const result = await db.execute({
     sql: 'SELECT id, body, sender_admin_id, created_at, read_at FROM messages WHERE user_id = ? ORDER BY created_at ASC',

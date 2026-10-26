@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
+import ChatWidget from '@/components/ChatWidget';
 
 export const metadata: Metadata = {
   title: 'Lucky Pearl — Premium Online Gaming',
@@ -23,6 +24,7 @@ export default function RootLayout({
       </head>
       <body>
         {children}
+        <ChatWidget />
       </body>
     </html>
   );
