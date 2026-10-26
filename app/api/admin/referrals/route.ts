@@ -58,8 +58,12 @@ export async function POST(request: Request) {
     }
 
     if (action === 'credit-given') {
-      if (referral.eligibility !== 'eligible') {
-        return NextResponse.json({ error: 'This referral is not eligible for the promo credit.' }, { status: 409 });
+      // The credit only becomes due after the customer's own first deposit is verified.
+      if (!referral.promoToGive) {
+        return NextResponse.json(
+          { error: referral.promoGivenAt ? 'The credit was already marked as given.' : 'The credit is not due yet. The customer has not made a verified first deposit.' },
+          { status: 409 }
+        );
       }
       await db.execute({
         sql: "UPDATE referrals SET referee_credit_given_at = datetime('now'), referee_credit_given_by = ? WHERE id = ? AND referee_credit_given_at IS NULL",
@@ -75,6 +79,19 @@ export async function POST(request: Request) {
       }
       await db.execute({
         sql: "UPDATE referrals SET referrer_paid_at = datetime('now'), referrer_paid_by = ? WHERE id = ? AND referrer_paid_at IS NULL",
+        args: [admin.id, referralId],
+      });
+      return NextResponse.json({ ok: true });
+    }
+
+    if (action === 'approve' && referral.eligibility === 'eligible') {
+      // A payment on hold (someone else paid, can't tell who paid, linked accounts, monthly limit):
+      // the admin has checked it and signs it off.
+      if (referral.state !== 'blocked') {
+        return NextResponse.json({ error: 'Nothing is on hold for this referral.' }, { status: 409 });
+      }
+      await db.execute({
+        sql: "UPDATE referrals SET payout_override_at = datetime('now'), payout_override_by = ? WHERE id = ?",
         args: [admin.id, referralId],
       });
       return NextResponse.json({ ok: true });

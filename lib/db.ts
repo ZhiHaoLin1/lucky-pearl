@@ -288,6 +288,15 @@ export function ensureSchema() {
       }
 
       // Migration for databases created before the Square integration columns existed.
+      // The admin's explicit OK on a referral payment that was put on hold (who paid, linked accounts, monthly cap).
+      const referralColumns = await db.execute('PRAGMA table_info(referrals)');
+      const referralColumnNames = new Set(referralColumns.rows.map((row) => String(row.name)));
+      for (const column of ['payout_override_at', 'payout_override_by']) {
+        if (!referralColumnNames.has(column)) {
+          await db.execute(`ALTER TABLE referrals ADD COLUMN ${column} TEXT`);
+        }
+      }
+
       // Real IP and coarse location (from Vercel's headers) per device row, for admin review.
       const deviceColumns = await db.execute('PRAGMA table_info(account_devices)');
       const deviceColumnNames = new Set(deviceColumns.rows.map((row) => String(row.name)));

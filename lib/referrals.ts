@@ -1,12 +1,14 @@
 import { createHmac, randomInt, randomUUID } from 'crypto';
 import { db } from './db';
 import { getOpenDuplicateGroups, hashForMatching, normalizeEmail, normalizeName, normalizePhone } from './accountSignals';
+import { sameFullName } from './nameMatching';
 
 // ---------------------------------------------------------------------------
 // The offer
-//   - Referrer: $10 cash once the friend makes a real purchase.
-//   - New customer: $10 promotional game credit.
-//   - A referred customer can't cash out until they've made a real purchase.
+//   - The new customer makes a first real deposit ($20+) that THEY paid for themselves.
+//   - Only then: $10 cash to the referrer and $10 promotional game credit to the new customer.
+//   - A referred customer can't cash out until that deposit is verified.
+//   - The credit is given by hand, after the customer texts from the phone number on their account.
 // Both rewards are handed out by hand (the admin credits the game account / pays the
 // referrer), and the admin Referrals tab keeps track of who is owed what.
 // ---------------------------------------------------------------------------
@@ -15,7 +17,7 @@ export const REFEREE_CREDIT_CENTS = 1_000;
 /** A deposit at least this big counts as a "real purchase". */
 export const REFERRAL_MIN_PURCHASE_CENTS = 2_000;
 /** Most referrer rewards that can be paid to one customer in any rolling 30 days. */
-export const REFERRER_MAX_REWARDS_PER_30_DAYS = 10;
+export const REFERRER_MAX_REWARDS_PER_30_DAYS = 5;
 
 export const REFERRAL_BASE_URL = process.env.REFERRAL_BASE_URL || 'https://referral.luckypearl.app';
 
@@ -195,26 +197,109 @@ export async function createReferralRecord(input: {
 }
 
 // ---------------------------------------------------------------------------
-// Cash-out lock for referred customers
+// Did the new customer pay for their own first deposit?
 // ---------------------------------------------------------------------------
-export async function getCashoutLock(userId: string): Promise<{ locked: boolean; message: string | null }> {
-  const referral = await db.execute({
-    sql: 'SELECT created_at, eligibility FROM referrals WHERE referee_user_id = ?',
+type DepositRecord = { amountCents: number; createdAt: string; method: string; payer: string | null };
+
+export type PurchaseAssessment =
+  | { status: 'none' } // no deposit of the minimum size yet
+  | { status: 'verified'; deposit: DepositRecord } // paid by the customer themselves
+  | { status: 'overridden'; deposit: DepositRecord } // admin signed off
+  | { status: 'other'; deposit: DepositRecord } // paid by someone with a different name
+  | { status: 'unknown'; deposit: DepositRecord }; // can't tell who paid (card/Square/manual entry)
+
+/**
+ * Venmo and Zelle payment emails carry the sender's real account name, so those can be checked
+ * against the account holder's name. Square notes, manual entries and anything without a payer
+ * name can't be verified automatically and wait for the admin.
+ */
+function assessPurchase(deposits: DepositRecord[], refereeName: string, overridden: boolean): PurchaseAssessment {
+  const real = deposits.filter((d) => d.amountCents >= REFERRAL_MIN_PURCHASE_CENTS);
+  if (real.length === 0) return { status: 'none' };
+
+  const verdict = (d: DepositRecord): 'self' | 'other' | 'unknown' => {
+    if (!d.payer || (d.method !== 'venmo' && d.method !== 'zelle')) return 'unknown';
+    return sameFullName(d.payer, refereeName) ? 'self' : 'other';
+  };
+
+  const self = real.find((d) => verdict(d) === 'self');
+  if (self) return { status: 'verified', deposit: self };
+  if (overridden) return { status: 'overridden', deposit: real[0] };
+  const first = real[0];
+  return { status: verdict(first) === 'other' ? 'other' : 'unknown', deposit: first };
+}
+
+const FUNDING_REASON = (assessment: PurchaseAssessment, refereeName: string) => {
+  if (assessment.status === 'other') {
+    return `The first deposit was paid by “${assessment.deposit.payer}”, not ${refereeName}. The new customer has to fund their own account.`;
+  }
+  if (assessment.status === 'unknown') {
+    return `Can’t tell who paid the first deposit (${assessment.deposit.method}). Check the payment and approve it if ${refereeName} paid it themselves.`;
+  }
+  return null;
+};
+
+async function loadRefereeDeposits(userId: string, since: string): Promise<DepositRecord[]> {
+  const result = await db.execute({
+    sql: `SELECT d.amount_cents, d.created_at, d.method, COALESCE(d.payer_name, e.parsed_name) AS payer
+          FROM deposits d LEFT JOIN email_unmatched_payments e ON e.email_message_id = d.email_message_id
+          WHERE d.user_id = ? AND d.created_at >= ? ORDER BY d.created_at ASC`,
+    args: [userId, since],
+  });
+  return result.rows.map((row) => ({
+    amountCents: Number(row.amount_cents),
+    createdAt: String(row.created_at),
+    method: String(row.method ?? ''),
+    payer: row.payer ? String(row.payer) : null,
+  }));
+}
+
+// ---------------------------------------------------------------------------
+// What a referred customer sees (dashboard banner) and the cash-out lock
+// ---------------------------------------------------------------------------
+export type RefereeStatus = {
+  referred: boolean;
+  /** The $10 credit is on offer to this customer (eligible referral). */
+  eligible: boolean;
+  /** Their first deposit has been verified as their own. */
+  purchaseVerified: boolean;
+  creditGiven: boolean;
+  locked: boolean;
+  message: string | null;
+};
+
+const NOT_REFERRED: RefereeStatus = { referred: false, eligible: false, purchaseVerified: false, creditGiven: false, locked: false, message: null };
+
+export async function getRefereeStatus(userId: string): Promise<RefereeStatus> {
+  const result = await db.execute({
+    sql: `SELECT r.created_at, r.eligibility, r.referee_credit_given_at, r.payout_override_at, u.full_name
+          FROM referrals r JOIN users u ON u.id = r.referee_user_id WHERE r.referee_user_id = ?`,
     args: [userId],
   });
-  const row = referral.rows[0];
-  // No referral, or the referral was rejected (no promo credit given): nothing to lock.
-  if (!row || String(row.eligibility) === 'rejected') return { locked: false, message: null };
+  const row = result.rows[0];
+  // No referral, or it was rejected (no promo credit given): nothing to lock.
+  if (!row || String(row.eligibility) === 'rejected') return NOT_REFERRED;
 
-  const purchase = await db.execute({
-    sql: 'SELECT 1 FROM deposits WHERE user_id = ? AND amount_cents >= ? AND created_at >= ? LIMIT 1',
-    args: [userId, REFERRAL_MIN_PURCHASE_CENTS, String(row.created_at)],
-  });
-  if (purchase.rows.length > 0) return { locked: false, message: null };
+  const deposits = await loadRefereeDeposits(userId, String(row.created_at));
+  const assessment = assessPurchase(deposits, String(row.full_name), Boolean(row.payout_override_at));
+  const verified = assessment.status === 'verified' || assessment.status === 'overridden';
+
   return {
-    locked: true,
-    message: `Because you joined through a friend’s invite, cashouts unlock after your first deposit of $${REFERRAL_MIN_PURCHASE_CENTS / 100} or more.`,
+    referred: true,
+    eligible: String(row.eligibility) === 'eligible',
+    purchaseVerified: verified,
+    creditGiven: Boolean(row.referee_credit_given_at),
+    locked: !verified,
+    message: verified
+      ? null
+      : `Because you joined through a friend’s invite, cashouts unlock after your first deposit of $${REFERRAL_MIN_PURCHASE_CENTS / 100} or more, paid from your own account. Already made it? Text us at (407) 796-8311 and we’ll confirm it.`,
   };
+}
+
+/** Kept for the withdrawal endpoint: locked while a referred customer has no verified first deposit. */
+export async function getCashoutLock(userId: string): Promise<{ locked: boolean; message: string | null }> {
+  const status = await getRefereeStatus(userId);
+  return { locked: status.locked, message: status.message };
 }
 
 // ---------------------------------------------------------------------------
@@ -234,6 +319,7 @@ export type ReferralRow = {
   eligibility: 'eligible' | 'review' | 'rejected';
   reason: string | null;
   manuallyReviewed: boolean;
+  overridden: boolean;
   state: ReferralState;
   blockReason: string | null;
   purchaseCents: number | null;
@@ -264,7 +350,7 @@ export type LinkStat = {
 };
 
 export async function getReferralOverview(): Promise<{ links: LinkStat[]; referrals: ReferralRow[] }> {
-  const [linksResult, visitsResult, referralsResult, purchasesResult, { strongByUser }] = await Promise.all([
+  const [linksResult, visitsResult, referralsResult, depositsResult, { strongByUser }] = await Promise.all([
     db.execute(
       `SELECT l.id, l.code, l.label, l.active, l.created_at, l.referrer_user_id, u.full_name
        FROM referral_links l JOIN users u ON u.id = l.referrer_user_id ORDER BY l.created_at DESC`
@@ -276,54 +362,57 @@ export async function getReferralOverview(): Promise<{ links: LinkStat[]; referr
        JOIN referral_links l ON l.id = r.link_id
        JOIN users ref ON ref.id = r.referee_user_id
        JOIN users rr ON rr.id = r.referrer_user_id
-       ORDER BY r.created_at DESC`
+       ORDER BY r.created_at ASC`
     ),
-    db.execute({
-      sql: `SELECT d.user_id, d.amount_cents, d.created_at
-            FROM deposits d JOIN referrals r ON r.referee_user_id = d.user_id
-            WHERE d.amount_cents >= ? AND d.created_at >= r.created_at
-            ORDER BY d.created_at ASC`,
-      args: [REFERRAL_MIN_PURCHASE_CENTS],
-    }),
+    db.execute(
+      `SELECT d.user_id, d.amount_cents, d.created_at, d.method, COALESCE(d.payer_name, e.parsed_name) AS payer
+       FROM deposits d
+       JOIN referrals r ON r.referee_user_id = d.user_id
+       LEFT JOIN email_unmatched_payments e ON e.email_message_id = d.email_message_id
+       WHERE d.created_at >= r.created_at
+       ORDER BY d.created_at ASC`
+    ),
     getOpenDuplicateGroups(),
   ]);
 
-  const firstPurchase = new Map<string, { cents: number; at: string }>();
-  for (const row of purchasesResult.rows) {
+  const depositsByUser = new Map<string, DepositRecord[]>();
+  for (const row of depositsResult.rows) {
     const id = String(row.user_id);
-    if (!firstPurchase.has(id)) firstPurchase.set(id, { cents: Number(row.amount_cents), at: String(row.created_at) });
-  }
-
-  const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
-  const paidRecently = new Map<string, number>();
-  for (const row of referralsResult.rows) {
-    if (row.referrer_paid_at && sqliteDate(String(row.referrer_paid_at)).getTime() >= thirtyDaysAgo) {
-      paidRecently.set(String(row.referrer_user_id), (paidRecently.get(String(row.referrer_user_id)) ?? 0) + 1);
-    }
+    const list = depositsByUser.get(id) ?? [];
+    list.push({
+      amountCents: Number(row.amount_cents),
+      createdAt: String(row.created_at),
+      method: String(row.method ?? ''),
+      payer: row.payer ? String(row.payer) : null,
+    });
+    depositsByUser.set(id, list);
   }
 
   const referrals: ReferralRow[] = referralsResult.rows.map((row) => {
     const refereeId = String(row.referee_user_id);
+    const referrerId = String(row.referrer_user_id);
+    const refereeName = String(row.referee_name);
     const eligibility = String(row.eligibility) as ReferralRow['eligibility'];
     const manuallyReviewed = Boolean(row.reviewed_at);
-    const purchase = firstPurchase.get(refereeId) ?? null;
+    const overridden = Boolean(row.payout_override_at);
     const paid = Boolean(row.referrer_paid_at);
+    const assessment = assessPurchase(depositsByUser.get(refereeId) ?? [], refereeName, overridden);
+    const purchase = assessment.status === 'none' ? null : assessment.deposit;
 
     let state: ReferralState;
     let blockReason: string | null = null;
     if (eligibility === 'rejected') state = 'rejected';
     else if (eligibility === 'review') state = 'review';
-    else if (paid) state = 'paid';
-    else if (!purchase) state = 'waiting';
-    else {
-      state = 'owed';
+    else if (assessment.status === 'none') state = paid ? 'paid' : 'waiting';
+    else if (assessment.status === 'other' || assessment.status === 'unknown') {
+      state = paid ? 'paid' : 'blocked';
+      blockReason = paid ? null : FUNDING_REASON(assessment, refereeName);
+    } else {
+      state = paid ? 'paid' : 'owed';
       const links = strongByUser.get(refereeId);
-      if (!manuallyReviewed && links) {
+      if (!paid && !overridden && links) {
         state = 'blocked';
         blockReason = `Now linked to ${links.accounts.map((account) => account.fullName).join(', ')} (${links.reasons.join('; ')}). Approve it first if this is fine.`;
-      } else if ((paidRecently.get(String(row.referrer_user_id)) ?? 0) >= REFERRER_MAX_REWARDS_PER_30_DAYS) {
-        state = 'blocked';
-        blockReason = `This referrer already received ${REFERRER_MAX_REWARDS_PER_30_DAYS} rewards in the last 30 days.`;
       }
     }
 
@@ -331,23 +420,49 @@ export async function getReferralOverview(): Promise<{ links: LinkStat[]; referr
       id: String(row.id),
       createdAt: String(row.created_at),
       refereeId,
-      refereeName: String(row.referee_name),
+      refereeName,
       refereePhone: String(row.referee_phone),
-      referrerId: String(row.referrer_user_id),
+      referrerId,
       referrerName: String(row.referrer_name),
       linkCode: String(row.code),
       eligibility,
       reason: row.eligibility_reason ? String(row.eligibility_reason) : null,
       manuallyReviewed,
+      overridden,
       state,
       blockReason,
-      purchaseCents: purchase?.cents ?? null,
-      purchasedAt: purchase?.at ?? null,
-      promoToGive: eligibility === 'eligible' && !row.referee_credit_given_at,
+      purchaseCents: purchase?.amountCents ?? null,
+      purchasedAt: purchase?.createdAt ?? null,
+      // The $10 credit only becomes due once the customer's own first deposit is verified.
+      promoToGive: eligibility === 'eligible' && (state === 'owed' || state === 'paid') && !row.referee_credit_given_at,
       promoGivenAt: row.referee_credit_given_at ? String(row.referee_credit_given_at) : null,
       referrerPaidAt: row.referrer_paid_at ? String(row.referrer_paid_at) : null,
     };
   });
+  // Monthly cap per referrer, applied in the order the purchases happened. Rewards already paid always
+  // count; an admin sign-off on a held payment skips the cap.
+  const byReferrer = new Map<string, ReferralRow[]>();
+  for (const referral of referrals) {
+    if ((referral.state === 'owed' || referral.state === 'paid') && referral.purchasedAt) {
+      byReferrer.set(referral.referrerId, [...(byReferrer.get(referral.referrerId) ?? []), referral]);
+    }
+  }
+  for (const list of Array.from(byReferrer.values())) {
+    list.sort((a, b) => (a.purchasedAt as string).localeCompare(b.purchasedAt as string));
+    const counted: number[] = [];
+    for (const referral of list) {
+      const when = sqliteDate(referral.purchasedAt as string).getTime();
+      const recent = counted.filter((time) => when - time < 30 * 24 * 60 * 60 * 1000);
+      if (referral.state === 'owed' && !referral.overridden && recent.length >= REFERRER_MAX_REWARDS_PER_30_DAYS) {
+        referral.state = 'blocked';
+        referral.promoToGive = false;
+        referral.blockReason = `${referral.referrerName} already has ${REFERRER_MAX_REWARDS_PER_30_DAYS} rewards in the last 30 days (the monthly limit). Approve it if you want to make an exception.`;
+      } else {
+        counted.push(when);
+      }
+    }
+  }
+  referrals.reverse(); // newest first for display
 
   const visitsByLink = new Map(visitsResult.rows.map((row) => [String(row.link_id), Number(row.n)]));
   const links: LinkStat[] = linksResult.rows.map((row) => {
@@ -367,7 +482,7 @@ export async function getReferralOverview(): Promise<{ links: LinkStat[]; referr
       eligible: mine.filter((r) => r.eligibility === 'eligible').length,
       review: mine.filter((r) => r.eligibility === 'review').length,
       rejected: mine.filter((r) => r.eligibility === 'rejected').length,
-      purchased: mine.filter((r) => r.purchasedAt && r.eligibility !== 'rejected').length,
+      purchased: mine.filter((r) => (r.state === 'owed' || r.state === 'paid')).length,
       owedCents: mine.filter((r) => r.state === 'owed').length * REFERRER_REWARD_CENTS,
       paidCents: mine.filter((r) => r.state === 'paid').length * REFERRER_REWARD_CENTS,
       promoToGive: mine.filter((r) => r.promoToGive).length,
@@ -379,5 +494,5 @@ export async function getReferralOverview(): Promise<{ links: LinkStat[]; referr
 
 /** Number of things waiting on the admin (for the tab badge). */
 export function countReferralActions(referrals: ReferralRow[]) {
-  return referrals.filter((r) => r.state === 'owed' || r.state === 'review' || r.promoToGive).length;
+  return referrals.filter((r) => r.state === 'owed' || r.state === 'review' || r.state === 'blocked' || r.promoToGive).length;
 }

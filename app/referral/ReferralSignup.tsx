@@ -114,7 +114,7 @@ export default function ReferralSignup({
                 <form onSubmit={submit} className="space-y-4">
                   {referrerFirstName && (
                     <div className="rounded-xl border border-gold-500/40 bg-gold-500/10 px-4 py-3 text-sm text-pearl-100">
-                      🎁 <span className="font-semibold text-gold-400">{referrerFirstName}</span> invited you. Sign up to get $10 in free game credit.
+                      🎁 <span className="font-semibold text-gold-400">{referrerFirstName}</span> invited you. Sign up, make your first $20 deposit, and get $10 in free game credit.
                     </div>
                   )}
                   {!code && (

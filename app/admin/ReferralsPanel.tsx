@@ -231,7 +231,7 @@ export default function ReferralsPanel({
                   <span className="text-pearl-100 font-semibold">{row.refereeName}</span>
                   <span className="text-pearl-300/50">invited by {row.referrerName}</span>
                   <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${label.className}`}>{label.text}</span>
-                  <span className="text-pearl-300/40 text-xs">joined {sqliteDate(row.createdAt)}</span>
+                  <span className="text-pearl-300/40 text-xs">joined {sqliteDate(row.createdAt)} · phone on account {row.refereePhone}</span>
                 </div>
                 {row.reason && <p className="text-amber-200/90 text-xs">{row.reason}</p>}
                 {row.blockReason && <p className="text-red-300 text-xs">{row.blockReason}</p>}
@@ -243,7 +243,7 @@ export default function ReferralsPanel({
                 <div className="flex flex-wrap gap-2">
                   {row.promoToGive && (
                     <button type="button" disabled={busy === `c-${row.id}`} onClick={() => post(`c-${row.id}`, { action: 'credit-given', referralId: row.id })} className="px-3 py-1.5 rounded-lg text-xs font-bold bg-gold-400 text-navy-900 disabled:opacity-60">
-                      I credited their $10 game credit
+                      I credited their $10 game credit (text came from {row.refereePhone})
                     </button>
                   )}
                   {row.eligibility === 'eligible' && row.promoGivenAt && <span className="text-xs text-pearl-300/50 self-center">Promo credit given {sqliteDate(row.promoGivenAt)}</span>}
@@ -255,7 +255,7 @@ export default function ReferralsPanel({
                   {row.state === 'paid' && <span className="text-xs text-pearl-300/50 self-center">Referrer paid {sqliteDate(row.referrerPaidAt)}</span>}
                   {(row.state === 'review' || row.state === 'blocked') && (
                     <button type="button" disabled={busy === `a-${row.id}`} onClick={() => post(`a-${row.id}`, { action: 'approve', referralId: row.id })} className="px-3 py-1.5 rounded-lg text-xs font-bold bg-navy-900/60 text-emerald-300 border border-emerald-500/30 disabled:opacity-60">
-                      Approve (they’re a real new customer)
+                      {row.state === 'blocked' ? 'I checked it: approve this payment' : 'Approve (they’re a real new customer)'}
                     </button>
                   )}
                   {(row.state === 'review' || row.state === 'blocked' || row.state === 'waiting' || row.state === 'owed') && (

@@ -24,7 +24,7 @@ import BonusTab from './BonusTab';
 import EventsTab, { type EventCard } from './EventsTab';
 import BirthdayRow from './BirthdayRow';
 import ReferralBanner from './ReferralBanner';
-import { getCashoutLock } from '@/lib/referrals';
+import { getRefereeStatus } from '@/lib/referrals';
 import HowToDepositCard from './HowToDepositCard';
 
 export const dynamic = 'force-dynamic';
@@ -176,12 +176,7 @@ export default async function DashboardPage() {
     .filter((card) => card.eligible);
   const nextHoliday = getNextHoliday();
 
-  const cashoutLock = await getCashoutLock(user.id);
-  const referralRow = (
-    await db.execute({ sql: 'SELECT eligibility, referee_credit_given_at FROM referrals WHERE referee_user_id = ?', args: [user.id] })
-  ).rows[0];
-  // Only people with a confirmed (eligible) referral are told about the game credit.
-  const showReferralCredit = Boolean(referralRow) && String(referralRow.eligibility) === 'eligible' && !referralRow.referee_credit_given_at;
+  const refereeStatus = await getRefereeStatus(user.id);
 
   const withdrawalsResult = await db.execute({
     sql: `SELECT id, amount_cents, method, payout_detail, fee_cents, status, created_at
@@ -280,7 +275,12 @@ export default async function DashboardPage() {
                 </div>
               </div>
 
-              <ReferralBanner showCredit={showReferralCredit} locked={cashoutLock.locked} />
+              <ReferralBanner
+                eligible={refereeStatus.eligible}
+                purchaseVerified={refereeStatus.purchaseVerified}
+                creditGiven={refereeStatus.creditGiven}
+                locked={refereeStatus.locked}
+              />
 
               <HowToDepositCard isGoldOrAbove={isGoldOrAbove} />
 
@@ -377,7 +377,7 @@ export default async function DashboardPage() {
             todaysWithdrawnCents: financeSummary.todaysWithdrawnCents,
             remainingTodayCents: financeSummary.remainingTodayCents,
             initialWithdrawals,
-            cashoutLockMessage: cashoutLock.message,
+            cashoutLockMessage: refereeStatus.message,
           }}
           initialDeposits={initialDeposits}
           bonusTabs={bonusTabs}

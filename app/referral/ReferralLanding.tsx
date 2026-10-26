@@ -37,8 +37,8 @@ export default function ReferralLanding({
           {referrerFirstName ? `${referrerFirstName} invited you to Lucky Pearl` : 'Invited by a friend?'}
         </h1>
         <p className="text-pearl-200/80 text-lg mb-8">
-          Join through your friend’s link and get <span className="text-gold-400 font-bold">{dollars(REFEREE_CREDIT_CENTS)} in free game credit</span>{' '}
-          to try your first games.
+          Join through your friend’s link, make your first deposit of {dollars(REFERRAL_MIN_PURCHASE_CENTS)} or more, and get{' '}
+          <span className="text-gold-400 font-bold">{dollars(REFEREE_CREDIT_CENTS)} in free game credit</span>.
         </p>
 
         <ReferralSignup
@@ -59,13 +59,16 @@ export default function ReferralLanding({
           <ol className="list-decimal pl-5 space-y-1.5">
             <li>Tap the button and create your free account.</li>
             <li>
-              We add your {dollars(REFEREE_CREDIT_CENTS)} game credit. Just text us at{' '}
+              Make your first deposit of {dollars(REFERRAL_MIN_PURCHASE_CENTS)} or more. It has to be paid from your own account, in your own
+              name. Cashouts unlock with this deposit.
+            </li>
+            <li>
+              Text us at{' '}
               <a href="sms:+14077968311" className="text-gold-400 underline underline-offset-2 font-semibold whitespace-nowrap">
                 (407) 796-8311
               </a>{' '}
-              once you’re signed up.
+              from the phone number you signed up with, and we’ll add your {dollars(REFEREE_CREDIT_CENTS)} game credit. Your friend gets rewarded too.
             </li>
-            <li>Make your first deposit of {dollars(REFERRAL_MIN_PURCHASE_CENTS)} or more to unlock cashouts. Your friend gets rewarded too.</li>
           </ol>
         </div>
 
@@ -73,8 +76,12 @@ export default function ReferralLanding({
           <p className="font-semibold text-pearl-300/70">Terms</p>
           <p>For new customers 18 or older only. One offer per person. Existing customers, repeat or duplicate accounts and self-referrals don’t qualify.</p>
           <p>
-            The {dollars(REFEREE_CREDIT_CENTS)} game credit is promotional. Cashouts are not available until you make your first deposit of{' '}
-            {dollars(REFERRAL_MIN_PURCHASE_CENTS)} or more. We may verify accounts and withhold rewards if we find misuse.
+            The {dollars(REFEREE_CREDIT_CENTS)} game credit is promotional and is added after your first deposit of {dollars(REFERRAL_MIN_PURCHASE_CENTS)} or more.
+            That deposit must be paid by you, from your own account, in your own name. Deposits paid by someone else don’t qualify.
+          </p>
+          <p>
+            Cashouts are not available until that first deposit is confirmed. To claim your credit, contact us from the phone number on your account.
+            We may verify accounts and withhold credit or rewards if we find misuse.
           </p>
           <p>Please play responsibly.</p>
         </div>

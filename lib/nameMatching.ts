@@ -117,3 +117,17 @@ export function matchCustomerByName<T extends { id: unknown; full_name: unknown 
 
   return { status: 'no_match' };
 }
+
+/**
+ * True when two full names are clearly the same person: identical, or the same first AND last
+ * name allowing a one-letter typo and ignoring middle names ("Gina M Genuine" = "Gina Genuine").
+ * Used to check that a deposit was paid by the account holder themselves.
+ */
+export function sameFullName(a: string, b: string): boolean {
+  const ta = tokens(a);
+  const tb = tokens(b);
+  if (ta.length === 0 || tb.length === 0) return false;
+  if (normalizeName(a) === normalizeName(b)) return true;
+  if (ta.length < 2 || tb.length < 2) return false;
+  return editDistance(ta[0], tb[0]) <= 1 && editDistance(lastToken(a), lastToken(b)) <= 1;
+}
