@@ -2,12 +2,12 @@ import { headers } from 'next/headers';
 import { ensureSchema } from '@/lib/db';
 import { getActiveLink, normalizeReferralCode } from '@/lib/referrals';
 import ReferralLanding from '../../ReferralLanding';
+import { mainSiteUrlForHost } from '@/lib/referralSite';
 
 export const dynamic = 'force-dynamic';
 
 export default async function ReferralInvitePage({ params }: { params: { code: string } }) {
-  const host = headers().get('host') ?? '';
-  const mainSiteUrl = host.startsWith('referral.') ? `https://www.${host.slice('referral.'.length)}` : '';
+  const mainSiteUrl = mainSiteUrlForHost(headers().get('host') ?? '');
   const code = normalizeReferralCode(params.code);
 
   let link = null;

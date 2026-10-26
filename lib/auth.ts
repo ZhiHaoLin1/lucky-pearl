@@ -1,6 +1,7 @@
 import { SignJWT, jwtVerify } from 'jose';
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
+import { randomUUID } from 'crypto';
 import { db, ensureSchema } from './db';
 
 export const SESSION_COOKIE = 'lp_session';
@@ -23,6 +24,30 @@ export async function createSessionToken(userId: string) {
     .setIssuedAt()
     .setExpirationTime(`${SESSION_MAX_AGE_SECONDS}s`)
     .sign(getSecretKey());
+}
+
+/**
+ * A login token that lives two minutes and works once. The referral site uses it to pass a brand-new
+ * customer over to the main site (cookies set on one site can't always be read on the other), so
+ * they land on their dashboard already signed in.
+ */
+export async function createHandoffToken(userId: string) {
+  return new SignJWT({ sub: userId, purpose: 'handoff' })
+    .setProtectedHeader({ alg: 'HS256' })
+    .setJti(randomUUID())
+    .setIssuedAt()
+    .setExpirationTime('120s')
+    .sign(getSecretKey());
+}
+
+export async function verifyHandoffToken(token: string): Promise<{ userId: string; jti: string } | null> {
+  try {
+    const { payload } = await jwtVerify(token, getSecretKey());
+    if (payload.purpose !== 'handoff' || typeof payload.sub !== 'string' || typeof payload.jti !== 'string') return null;
+    return { userId: payload.sub, jti: payload.jti };
+  } catch {
+    return null;
+  }
 }
 
 export async function verifySessionToken(token: string): Promise<string | null> {

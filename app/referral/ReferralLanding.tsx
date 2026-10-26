@@ -1,6 +1,7 @@
 import { Gem } from 'lucide-react';
 import { REFEREE_CREDIT_CENTS, REFERRAL_MIN_PURCHASE_CENTS } from '@/lib/referrals';
 import VisitBeacon from './VisitBeacon';
+import ReferralSignup from './ReferralSignup';
 
 const dollars = (cents: number) => `$${cents / 100}`;
 
@@ -14,8 +15,6 @@ export default function ReferralLanding({
   referrerFirstName: string | null;
   mainSiteUrl: string;
 }) {
-  const joinUrl = code ? `${mainSiteUrl}/?ref=${code}` : mainSiteUrl;
-
   return (
     <main
       className="min-h-screen flex flex-col items-center px-5 py-10 text-center"
@@ -42,12 +41,12 @@ export default function ReferralLanding({
           to try your first games.
         </p>
 
-        <a
-          href={joinUrl}
-          className="inline-block w-full sm:w-auto px-10 py-4 rounded-full bg-gold-gradient text-navy-900 font-bold text-lg shadow-lg animate-pulse-gold"
-        >
-          Claim my {dollars(REFEREE_CREDIT_CENTS)}
-        </a>
+        <ReferralSignup
+          code={code}
+          referrerFirstName={referrerFirstName}
+          mainSiteUrl={mainSiteUrl}
+          buttonLabel={`Claim my ${dollars(REFEREE_CREDIT_CENTS)}`}
+        />
 
         {!code && (
           <p className="text-pearl-300/60 text-sm mt-5">

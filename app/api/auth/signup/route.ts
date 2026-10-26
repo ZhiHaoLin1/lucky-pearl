@@ -2,8 +2,9 @@ import { randomUUID } from 'crypto';
 import bcrypt from 'bcryptjs';
 import { NextResponse } from 'next/server';
 import { db, ensureSchema } from '@/lib/db';
-import { attachSessionCookie } from '@/lib/auth';
+import { attachSessionCookie, createHandoffToken } from '@/lib/auth';
 import { claimGuestMessages } from '@/lib/chat';
+import { isFromReferralSite, referralPreflight, withReferralCors } from '@/lib/referralSite';
 import { recordAccountSignals, clientIp, DEVICE_COOKIE, isValidDeviceId } from '@/lib/accountSignals';
 import { cookies } from 'next/headers';
 import {
@@ -32,7 +33,16 @@ type SignupPayload = {
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+// The referral site calls this endpoint directly, so answer its CORS preflight and tag responses.
+export async function OPTIONS(request: Request) {
+  return referralPreflight(request);
+}
+
 export async function POST(request: Request) {
+  return withReferralCors(request, await handleSignup(request));
+}
+
+async function handleSignup(request: Request) {
   try {
     await ensureSchema();
 
@@ -145,7 +155,9 @@ export async function POST(request: Request) {
       }).catch(() => {});
     }
 
-    const response = NextResponse.json({ ok: true, fullName });
+    // Sign-ups made on the referral site get a one-time token to carry their login over to the main site.
+    const handoffToken = isFromReferralSite(request) ? await createHandoffToken(id) : undefined;
+    const response = NextResponse.json({ ok: true, fullName, handoffToken });
     await attachSessionCookie(response, id);
     await claimGuestMessages(response, id);
     await recordAccountSignals(request, response, id);

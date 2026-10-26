@@ -141,6 +141,13 @@ export function ensureSchema() {
             resolved_by_admin_id TEXT
           )`
         ),
+        // Login handoff tokens that were already used (each works once).
+        db.execute(
+          `CREATE TABLE IF NOT EXISTS auth_handoffs (
+            jti TEXT PRIMARY KEY,
+            used_at TEXT NOT NULL DEFAULT (datetime('now'))
+          )`
+        ),
         // Referral campaign: one link per customer, visits to the landing page, and each referred signup.
         db.execute(
           `CREATE TABLE IF NOT EXISTS referral_links (
