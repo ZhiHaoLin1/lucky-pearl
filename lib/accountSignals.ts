@@ -54,6 +54,34 @@ export async function recordAccountSignals(request: Request, response: NextRespo
   }
 }
 
+/** Rough, human-readable browser + system from a user-agent string, for the admin Details view. */
+export function describeUserAgent(userAgent: string): { browser: string; os: string } {
+  if (!userAgent) return { browser: 'Unknown browser', os: 'Unknown system' };
+  const os = /iPhone|iPad|iPod/.test(userAgent)
+    ? 'iOS'
+    : /Android/.test(userAgent)
+    ? 'Android'
+    : /Windows/.test(userAgent)
+    ? 'Windows'
+    : /Mac OS X|Macintosh/.test(userAgent)
+    ? 'macOS'
+    : /Linux/.test(userAgent)
+    ? 'Linux'
+    : 'Unknown system';
+  const browser = /Edg\//.test(userAgent)
+    ? 'Edge'
+    : /OPR\/|Opera/.test(userAgent)
+    ? 'Opera'
+    : /Firefox\//.test(userAgent) || /FxiOS/.test(userAgent)
+    ? 'Firefox'
+    : /Chrome\/|CriOS/.test(userAgent)
+    ? 'Chrome'
+    : /Safari\//.test(userAgent)
+    ? 'Safari'
+    : 'Unknown browser';
+  return { browser, os };
+}
+
 // ---------------------------------------------------------------------------
 // Normalising identity fields so trivial tricks don't hide a duplicate
 // ---------------------------------------------------------------------------
@@ -73,7 +101,7 @@ export function normalizeEmail(email: string) {
   return `${local}@${domain}`;
 }
 
-const normalizeName = (name: string) => name.toLowerCase().replace(/[^a-z]/g, '');
+export const normalizeName = (name: string) => name.toLowerCase().replace(/[^a-z]/g, '');
 
 /** A payout destination in a comparable form: cashtags lowercase without "$", phones as 10 digits, emails normalised. */
 export function normalizePayoutDestination(detail: string) {

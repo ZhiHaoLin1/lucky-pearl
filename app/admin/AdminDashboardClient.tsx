@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { AlertTriangle, AtSign, CalendarDays, Check, Copy, Gift, Mail, MailWarning, Megaphone, Pencil, Phone, Send, Trash2, Users } from 'lucide-react';
 import AdminFinancePanel from './AdminFinancePanel';
+import CustomerDetailsPanel from './CustomerDetailsPanel';
 import SquareQueuePanel from './SquareQueuePanel';
 import EmailQueuePanel from './EmailQueuePanel';
 import BonusesPanel from './BonusesPanel';
@@ -54,7 +55,7 @@ export default function AdminDashboardClient({
   const [isSending, setIsSending] = useState(false);
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [detailTab, setDetailTab] = useState<'messages' | 'finance'>('messages');
+  const [detailTab, setDetailTab] = useState<'messages' | 'finance' | 'details'>('messages');
   const [view, setView] = useState<'customers' | 'broadcast' | 'square' | 'email' | 'bonuses' | 'events' | 'duplicates'>('customers');
   const [broadcastBody, setBroadcastBody] = useState('');
   const [isBroadcasting, setIsBroadcasting] = useState(false);
@@ -525,7 +526,7 @@ export default function AdminDashboardClient({
               </div>
 
               <div className="flex gap-2 mb-4 border-b border-white/10 overflow-x-auto overflow-y-hidden">
-                {(['messages', 'finance'] as const).map((key) => (
+                {(['messages', 'finance', 'details'] as const).map((key) => (
                   <button
                     key={key}
                     type="button"
@@ -536,12 +537,20 @@ export default function AdminDashboardClient({
                         : 'border-transparent text-pearl-300/60 hover:text-pearl-100'
                     }`}
                   >
-                    {key === 'messages' ? 'Messages' : 'Deposits & Withdrawals'}
+                    {key === 'messages' ? 'Messages' : key === 'finance' ? 'Deposits & Withdrawals' : 'Details'}
                   </button>
                 ))}
               </div>
 
-              {detailTab === 'finance' ? (
+              {detailTab === 'details' ? (
+                <CustomerDetailsPanel
+                  customerId={activeCustomer.id}
+                  onOpenCustomer={(id) => {
+                    setActiveId(id);
+                    setDetailTab('details');
+                  }}
+                />
+              ) : detailTab === 'finance' ? (
                 <AdminFinancePanel customerId={activeCustomer.id} />
               ) : (
                 <>
