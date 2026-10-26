@@ -3,9 +3,35 @@ import { createClient } from '@libsql/client';
 const url = process.env.TURSO_DATABASE_URL ?? 'file:local.db';
 const authToken = process.env.TURSO_AUTH_TOKEN;
 
-export const db = createClient(
+const client = createClient(
   authToken ? { url, authToken } : { url }
 );
+
+// Serverless functions sometimes reuse a connection that Turso has already closed, which
+// surfaces as "fetch failed ... other side closed". Reads are safe to repeat, so retry those
+// a couple of times (writes are never retried, to avoid doing them twice).
+const TRANSIENT_NETWORK_ERROR = /fetch failed|other side closed|UND_ERR_SOCKET|ECONNRESET|socket hang up/i;
+const isReadOnlyStatement = (statement: unknown) => {
+  const sql = typeof statement === 'string' ? statement : String((statement as { sql?: string })?.sql ?? '');
+  return /^\s*(select|pragma|with)\b/i.test(sql);
+};
+const executeOnce = client.execute.bind(client) as (statement: never) => Promise<unknown>;
+client.execute = (async (statement: never) => {
+  const attempts = isReadOnlyStatement(statement) ? 3 : 1;
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await executeOnce(statement);
+    } catch (error) {
+      const text = `${(error as Error)?.message ?? ''} ${(error as { cause?: { message?: string; code?: string } })?.cause?.message ?? ''} ${
+        (error as { cause?: { code?: string } })?.cause?.code ?? ''
+      }`;
+      if (attempt >= attempts || !TRANSIENT_NETWORK_ERROR.test(text)) throw error;
+      await new Promise((resolve) => setTimeout(resolve, 150 * attempt));
+    }
+  }
+}) as typeof client.execute;
+
+export const db = client;
 
 let schemaReady: Promise<void> | null = null;
 

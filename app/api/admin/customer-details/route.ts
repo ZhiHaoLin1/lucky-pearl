@@ -14,10 +14,15 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'Missing userId.' }, { status: 400 });
   }
 
-  await ensureSchema();
-  const details = await getCustomerDetails(userId);
-  if (!details) {
-    return NextResponse.json({ error: 'Customer not found.' }, { status: 404 });
+  try {
+    await ensureSchema();
+    const details = await getCustomerDetails(userId);
+    if (!details) {
+      return NextResponse.json({ error: 'Customer not found.' }, { status: 404 });
+    }
+    return NextResponse.json({ details });
+  } catch (error) {
+    console.error('customer-details failed', error);
+    return NextResponse.json({ error: 'Could not load details. Please try again.' }, { status: 500 });
   }
-  return NextResponse.json({ details });
 }

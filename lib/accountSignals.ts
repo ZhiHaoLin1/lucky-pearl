@@ -175,20 +175,23 @@ export type DuplicateGroup = {
 type Edge = { a: string; b: string; reason: string; strong: boolean };
 
 export async function findDuplicateGroups(): Promise<DuplicateGroup[]> {
-  const usersResult = await db.execute(
-    `SELECT u.id, u.full_name, u.email, u.phone, u.username, u.birthday, u.created_at, u.tier_override,
-            COALESCE((SELECT SUM(amount_cents) FROM deposits d WHERE d.user_id = u.id), 0) AS lifetime,
-            (SELECT MAX(last_seen_at) FROM account_devices ad WHERE ad.user_id = u.id) AS last_seen
-     FROM users u WHERE u.role != 'admin'`
-  );
-  const devicesResult = await db.execute('SELECT user_id, device_id, ip_hash, ua_hash FROM account_devices');
-  const payoutsResult = await db.execute('SELECT user_id, payout_detail FROM withdrawals');
-  // Payer names come from the payment emails (stored on the deposit, or still on the review queue entry).
-  const payersResult = await db.execute(
-    `SELECT d.user_id, COALESCE(d.payer_name, e.parsed_name) AS payer
-     FROM deposits d LEFT JOIN email_unmatched_payments e ON e.email_message_id = d.email_message_id
-     WHERE COALESCE(d.payer_name, e.parsed_name) IS NOT NULL`
-  );
+  // One round trip each, run together. Payer names come from the payment emails (stored on
+  // the deposit, or still on the review queue entry).
+  const [usersResult, devicesResult, payoutsResult, payersResult] = await Promise.all([
+    db.execute(
+      `SELECT u.id, u.full_name, u.email, u.phone, u.username, u.birthday, u.created_at, u.tier_override,
+              COALESCE((SELECT SUM(amount_cents) FROM deposits d WHERE d.user_id = u.id), 0) AS lifetime,
+              (SELECT MAX(last_seen_at) FROM account_devices ad WHERE ad.user_id = u.id) AS last_seen
+       FROM users u WHERE u.role != 'admin'`
+    ),
+    db.execute('SELECT user_id, device_id, ip_hash, ua_hash FROM account_devices'),
+    db.execute('SELECT user_id, payout_detail FROM withdrawals'),
+    db.execute(
+      `SELECT d.user_id, COALESCE(d.payer_name, e.parsed_name) AS payer
+       FROM deposits d LEFT JOIN email_unmatched_payments e ON e.email_message_id = d.email_message_id
+       WHERE COALESCE(d.payer_name, e.parsed_name) IS NOT NULL`
+    ),
+  ]);
 
   const users = usersResult.rows.map((row) => {
     const override = row.tier_override ? VIP_TIERS.find((t) => t.name === String(row.tier_override)) : undefined;

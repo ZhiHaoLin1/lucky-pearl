@@ -12,9 +12,14 @@ export async function GET() {
   if (!(await requireAdmin())) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
   }
-  await ensureSchema();
-  const { open } = await getOpenDuplicateGroups();
-  return NextResponse.json({ groups: open });
+  try {
+    await ensureSchema();
+    const { open } = await getOpenDuplicateGroups();
+    return NextResponse.json({ groups: open });
+  } catch (error) {
+    console.error('duplicates failed', error);
+    return NextResponse.json({ error: 'Could not load duplicates. Please try again.' }, { status: 500 });
+  }
 }
 
 // "Looks fine": hides a group (e.g. a family sharing a phone). If another account later

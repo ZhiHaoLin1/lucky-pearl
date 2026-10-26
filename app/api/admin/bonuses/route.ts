@@ -9,9 +9,14 @@ export async function GET() {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
   }
 
-  await ensureSchema();
-  const rows = await getBonusPayoutRows();
-  return NextResponse.json({ rows });
+  try {
+    await ensureSchema();
+    const rows = await getBonusPayoutRows();
+    return NextResponse.json({ rows });
+  } catch (error) {
+    console.error('bonuses failed', error);
+    return NextResponse.json({ error: 'Could not load bonuses. Please try again.' }, { status: 500 });
+  }
 }
 
 // Marks a customer's bonus as credited up to what they've earned right now.

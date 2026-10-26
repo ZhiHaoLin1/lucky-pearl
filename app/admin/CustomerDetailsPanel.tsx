@@ -69,8 +69,13 @@ export default function CustomerDetailsPanel({
     setError(null);
     fetch(`/api/admin/customer-details?userId=${encodeURIComponent(customerId)}`)
       .then(async (res) => {
-        const data = await res.json();
-        if (!res.ok) throw new Error(data?.error || 'Could not load details.');
+        // The server can fail with an empty body, so don't assume it is JSON.
+        const text = await res.text();
+        let data: { error?: string; details?: CustomerDetails } = {};
+        try {
+          data = JSON.parse(text);
+        } catch {}
+        if (!res.ok || !data.details) throw new Error(data.error || 'Could not load details. Please try again.');
         if (!cancelled) setDetails(data.details);
       })
       .catch((err) => {
