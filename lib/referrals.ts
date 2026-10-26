@@ -13,7 +13,7 @@ import { getOpenDuplicateGroups, hashForMatching, normalizeEmail, normalizeName,
 export const REFERRER_REWARD_CENTS = 1_000;
 export const REFEREE_CREDIT_CENTS = 1_000;
 /** A deposit at least this big counts as a "real purchase". */
-export const REFERRAL_MIN_PURCHASE_CENTS = 2_500;
+export const REFERRAL_MIN_PURCHASE_CENTS = 2_000;
 /** Most referrer rewards that can be paid to one customer in any rolling 30 days. */
 export const REFERRER_MAX_REWARDS_PER_30_DAYS = 10;
 

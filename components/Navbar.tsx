@@ -46,6 +46,8 @@ export default function Navbar() {
   });
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const turnstileRef = useRef<TurnstileHandle>(null);
+  // Tells the homepage (EntryModals) when the join popup was closed without signing up.
+  const joinWasOpen = useRef(false);
   // Set when the visitor arrived through a friend's referral link.
   const [referral, setReferral] = useState<{ code: string; firstName: string } | null>(null);
   const [adultConfirmed, setAdultConfirmed] = useState(false);
@@ -104,6 +106,11 @@ export default function Navbar() {
     window.addEventListener('lp-open-join', onOpenJoin);
     return () => window.removeEventListener('lp-open-join', onOpenJoin);
   }, []);
+
+  useEffect(() => {
+    if (!joinOpen && joinWasOpen.current) window.dispatchEvent(new Event('lp-join-closed'));
+    joinWasOpen.current = joinOpen;
+  }, [joinOpen]);
 
   // Referral links arrive as /?ref=CODE. Remember the code for 30 days, open the join form,
   // and ask the server whose invite it is so the form can say so.
