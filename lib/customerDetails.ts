@@ -24,6 +24,8 @@ export type CustomerDetails = {
   devices: Array<{
     deviceShort: string;
     networkShort: string;
+    ip: string | null;
+    location: string | null;
     browser: string;
     os: string;
     firstSeenAt: string;
@@ -88,6 +90,8 @@ export async function getCustomerDetails(userId: string): Promise<CustomerDetail
     devices.push({
       deviceShort: deviceId.slice(0, 8),
       networkShort: ipHash ? ipHash.slice(0, 6) : 'unknown',
+      ip: row.ip ? String(row.ip) : null,
+      location: [row.city, row.region, row.country].filter(Boolean).map(String).join(', ') || null,
       browser,
       os,
       firstSeenAt: String(row.first_seen_at),

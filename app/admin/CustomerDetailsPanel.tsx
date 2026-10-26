@@ -148,7 +148,8 @@ export default function CustomerDetailsPanel({
                   {device.browser} on {device.os}
                 </p>
                 <p className="text-pearl-300/60 text-xs">
-                  Device …{device.deviceShort} · network …{device.networkShort} · seen {device.seenCount}× · first {sqliteDate(device.firstSeenAt)} ·
+                  {device.ip ? `IP ${device.ip}` : `Network …${device.networkShort}`}
+                  {device.location ? ` (${device.location})` : ''} · device …{device.deviceShort} · seen {device.seenCount}× · first {sqliteDate(device.firstSeenAt)} ·
                   last {sqliteDate(device.lastSeenAt)}
                 </p>
                 {device.sameDevice.length > 0 && (
@@ -163,7 +164,7 @@ export default function CustomerDetailsPanel({
                 )}
               </div>
             ))}
-            <p className="text-pearl-300/40 text-xs">IP addresses are stored only as scrambled codes, so you can compare networks but not see the address.</p>
+            <p className="text-pearl-300/40 text-xs">IPs are saved at each login or signup (and removed after a year of no activity). Older entries only have a scrambled code, so they show as a network code.</p>
           </div>
         )}
       </Section>

@@ -54,7 +54,7 @@ export default async function AdminPage() {
   const emailQueueCount = Number(emailQueueResult.rows[0]?.c ?? 0);
 
   const duplicateCount = (await getOpenDuplicateGroups()).open.length;
-  const bonusOwedCount = (await getBonusPayoutRows()).filter((row) => row.owedCents > 0).length;
+  const bonusOwedCount = (await getBonusPayoutRows()).filter((row) => row.owedCents > 0 && !row.blockedReason).length;
 
   return (
     <main

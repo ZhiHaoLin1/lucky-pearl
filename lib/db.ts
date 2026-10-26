@@ -207,6 +207,15 @@ export function ensureSchema() {
       }
 
       // Migration for databases created before the Square integration columns existed.
+      // Real IP and coarse location (from Vercel's headers) per device row, for admin review.
+      const deviceColumns = await db.execute('PRAGMA table_info(account_devices)');
+      const deviceColumnNames = new Set(deviceColumns.rows.map((row) => String(row.name)));
+      for (const column of ['ip', 'country', 'region', 'city']) {
+        if (!deviceColumnNames.has(column)) {
+          await db.execute(`ALTER TABLE account_devices ADD COLUMN ${column} TEXT`);
+        }
+      }
+
       const depositColumns = await db.execute('PRAGMA table_info(deposits)');
       const depositColumnNames = new Set(depositColumns.rows.map((row) => String(row.name)));
       if (!depositColumnNames.has('square_payment_id')) {

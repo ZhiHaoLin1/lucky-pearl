@@ -25,30 +25,66 @@ export function clientIp(request: Request): string | null {
   return (request.headers.get('x-forwarded-for') ?? '').split(',')[0].trim() || null;
 }
 
+const DEVICE_RETENTION_DAYS = 365;
+
+export function isValidDeviceId(value: string | null | undefined): value is string {
+  return Boolean(value) && DEVICE_TOKEN_PATTERN.test(value as string);
+}
+
+export function newDeviceId() {
+  return randomBytes(24).toString('hex');
+}
+
+export function setDeviceCookie(response: NextResponse, deviceId: string) {
+  response.cookies.set(DEVICE_COOKIE, deviceId, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    path: '/',
+    maxAge: DEVICE_MAX_AGE_SECONDS,
+  });
+}
+
+/** Country / region / city from Vercel's edge headers (absent when running locally). */
+function requestLocation(request: Request) {
+  const header = (name: string) => {
+    const value = request.headers.get(name);
+    if (!value) return null;
+    try {
+      return decodeURIComponent(value).slice(0, 80);
+    } catch {
+      return value.slice(0, 80);
+    }
+  };
+  return { country: header('x-vercel-ip-country'), region: header('x-vercel-ip-country-region'), city: header('x-vercel-ip-city') };
+}
+
 /** Records (or refreshes) this device/network for the account. Never throws. */
 export async function recordAccountSignals(request: Request, response: NextResponse, userId: string) {
   try {
     let deviceId = cookies().get(DEVICE_COOKIE)?.value ?? '';
-    if (!DEVICE_TOKEN_PATTERN.test(deviceId)) {
-      deviceId = randomBytes(24).toString('hex');
-    }
-    response.cookies.set(DEVICE_COOKIE, deviceId, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      path: '/',
-      maxAge: DEVICE_MAX_AGE_SECONDS,
-    });
+    if (!isValidDeviceId(deviceId)) deviceId = newDeviceId();
+    setDeviceCookie(response, deviceId);
 
     const ip = clientIp(request);
+    const { country, region, city } = requestLocation(request);
     const userAgent = (request.headers.get('user-agent') ?? '').slice(0, 300);
     await db.execute({
-      sql: `INSERT INTO account_devices (user_id, device_id, ip_hash, ua_hash, user_agent)
-            VALUES (?, ?, ?, ?, ?)
+      sql: `INSERT INTO account_devices (user_id, device_id, ip_hash, ua_hash, user_agent, ip, country, region, city)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(user_id, device_id, ip_hash) DO UPDATE SET
-              last_seen_at = datetime('now'), seen_count = seen_count + 1, ua_hash = excluded.ua_hash, user_agent = excluded.user_agent`,
-      args: [userId, deviceId, ip ? keyedHash(ip) : '', userAgent ? keyedHash(userAgent) : '', userAgent],
+              last_seen_at = datetime('now'), seen_count = seen_count + 1, ua_hash = excluded.ua_hash, user_agent = excluded.user_agent,
+              ip = excluded.ip, country = excluded.country, region = excluded.region, city = excluded.city`,
+      args: [userId, deviceId, ip ? keyedHash(ip) : '', userAgent ? keyedHash(userAgent) : '', userAgent, ip, country, region, city],
     });
+
+    // Retention: drop device/IP history nobody has used for a year.
+    if (Math.random() < 0.02) {
+      await db.execute({
+        sql: `DELETE FROM account_devices WHERE last_seen_at < datetime('now', ?)`,
+        args: [`-${DEVICE_RETENTION_DAYS} days`],
+      });
+    }
   } catch {
     // Tracking must never block a login or signup.
   }

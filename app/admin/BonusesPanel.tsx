@@ -30,7 +30,7 @@ export default function BonusesPanel({ onCountChange }: { onCountChange: (count:
       .then((data) => {
         const next: BonusPayoutRow[] = Array.isArray(data?.rows) ? data.rows : [];
         setRows(next);
-        onCountChange(next.filter((row) => row.owedCents > 0).length);
+        onCountChange(next.filter((row) => row.owedCents > 0 && !row.blockedReason).length);
       })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -70,7 +70,7 @@ export default function BonusesPanel({ onCountChange }: { onCountChange: (count:
     return <p className="text-pearl-300/50 text-sm">Loading bonuses…</p>;
   }
 
-  const owedCount = rows.filter((row) => row.owedCents > 0).length;
+  const owedCount = rows.filter((row) => row.owedCents > 0 && !row.blockedReason).length;
 
   return (
     <div className="space-y-4">
@@ -115,7 +115,10 @@ export default function BonusesPanel({ onCountChange }: { onCountChange: (count:
                     {row.fullName}
                     {row.username && <span className="text-pearl-300/50 font-normal"> · {row.username}</span>}
                   </p>
-                  {row.duplicateWarning && (
+                  {row.blockedReason && (
+                    <p className="text-red-300 text-xs font-semibold mb-0.5">⛔ {row.blockedReason}. Only one linked account gets this bonus. If these really are different people, mark the group as fine in the Duplicates tab.</p>
+                  )}
+                  {row.duplicateWarning && !row.blockedReason && (
                     <p className="text-amber-300 text-xs font-semibold mb-0.5">⚠ {row.duplicateWarning}. Check the Duplicates tab before paying.</p>
                   )}
                   <p className="text-pearl-300/60 text-sm">
@@ -131,7 +134,9 @@ export default function BonusesPanel({ onCountChange }: { onCountChange: (count:
                     </a>
                   </p>
                 </div>
-                {owed ? (
+                {owed && row.blockedReason ? (
+                  <span className="shrink-0 text-sm text-red-300 font-semibold">Not payable</span>
+                ) : owed ? (
                   <button
                     type="button"
                     onClick={() => markPaid(row)}

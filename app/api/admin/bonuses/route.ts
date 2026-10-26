@@ -36,6 +36,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'No bonus found for that customer.' }, { status: 404 });
     }
 
+    if (row.blockedReason) {
+      return NextResponse.json({ error: row.blockedReason }, { status: 409 });
+    }
+
     await db.execute({
       sql: `INSERT INTO bonus_payouts (user_id, bonus_key, paid_cents, paid_at, paid_by_admin_id)
             VALUES (?, ?, ?, datetime('now'), ?)

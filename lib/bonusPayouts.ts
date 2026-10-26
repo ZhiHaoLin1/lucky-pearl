@@ -27,6 +27,8 @@ export type BonusPayoutRow = {
   owedCents: number;
   // Set when this customer is in an unreviewed possible-duplicate group.
   duplicateWarning: string | null;
+  // Set when a strongly linked account (same phone, device, payout destination...) was already paid this bonus.
+  blockedReason: string | null;
 };
 
 const tierIndexByName = (name: string) => VIP_TIERS.findIndex((tier) => tier.name === name);
@@ -110,6 +112,16 @@ export async function getBonusPayoutRows(
       earnedCents,
       paidCents,
       owedCents: Math.max(0, earnedCents - paidCents),
+      blockedReason: (() => {
+        const group = duplicateByUser.get(user.id);
+        if (!group || group.strength !== 'strong') return null;
+        const paidTo = group.accounts.filter(
+          (account) => account.id !== user.id && (paid.get(`${account.id}|${window.key}`) ?? 0) > 0
+        );
+        return paidTo.length > 0
+          ? `Already paid to a linked account: ${paidTo.map((account) => account.fullName).join(', ')} (${group.reasons.join('; ')})`
+          : null;
+      })(),
       duplicateWarning: (() => {
         const group = duplicateByUser.get(user.id);
         if (!group) return null;
