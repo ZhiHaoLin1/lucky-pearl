@@ -95,7 +95,7 @@ export async function allowChatMessage(conversationId: string, ip: string | null
   }
   // Keep the table small.
   if (Math.random() < 0.05) {
-    await db.execute("DELETE FROM chat_rate_events WHERE created_at < datetime('now', '-1 day')");
+    await db.execute("DELETE FROM chat_rate_events WHERE created_at < datetime('now', '-2 days')");
   }
   return true;
 }

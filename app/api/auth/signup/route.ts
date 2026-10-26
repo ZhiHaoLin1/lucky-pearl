@@ -5,7 +5,8 @@ import { db, ensureSchema } from '@/lib/db';
 import { attachSessionCookie, createHandoffToken } from '@/lib/auth';
 import { claimGuestMessages } from '@/lib/chat';
 import { isFromReferralSite, referralPreflight, withReferralCors } from '@/lib/referralSite';
-import { recordAccountSignals, clientIp, DEVICE_COOKIE, isValidDeviceId } from '@/lib/accountSignals';
+import { allowAttempt } from '@/lib/rateLimit';
+import { recordAccountSignals, clientIp, DEVICE_COOKIE, hashForMatching, isValidDeviceId } from '@/lib/accountSignals';
 import { cookies } from 'next/headers';
 import {
   createReferralRecord,
@@ -46,6 +47,21 @@ async function handleSignup(request: Request) {
   try {
     await ensureSchema();
 
+    // Throttle sign-up attempts per network and per browser so a script can't mass-create accounts.
+    // Generous for real people (a household or cafe can share one address), tight for bots.
+    const deviceCookie = cookies().get(DEVICE_COOKIE)?.value;
+    const ip = clientIp(request);
+    const allowed = await allowAttempt([
+      ...(ip ? [{ key: `signup-ip:${hashForMatching(ip)}`, rules: [{ minutes: 60, max: 10 }, { minutes: 1440, max: 30 }] }] : []),
+      ...(isValidDeviceId(deviceCookie) ? [{ key: `signup-device:${deviceCookie}`, rules: [{ minutes: 1440, max: 5 }] }] : []),
+    ]);
+    if (!allowed) {
+      return NextResponse.json(
+        { error: 'Too many sign-up attempts from this network. Please wait a while and try again, or text us at (407) 796-8311.' },
+        { status: 429 }
+      );
+    }
+
     const body = (await request.json()) as SignupPayload;
     const fullName = body.fullName?.trim() ?? '';
     const email = body.email?.trim().toLowerCase() ?? '';
@@ -80,7 +96,8 @@ async function handleSignup(request: Request) {
       birthday = `${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
     }
 
-    if (process.env.TURNSTILE_SECRET_KEY) {
+    // Only enforced once BOTH keys are set, so a half-finished setup can't lock everyone out of signing up.
+    if (process.env.TURNSTILE_SECRET_KEY && process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY) {
       const remoteIp = request.headers.get('cf-connecting-ip') || request.headers.get('x-forwarded-for');
       const captchaOk = await verifyTurnstileToken(body.turnstileToken ?? '', remoteIp);
       if (!captchaOk) {
