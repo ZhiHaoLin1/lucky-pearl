@@ -115,6 +115,13 @@ export function ensureSchema() {
             resolved_by_admin_id TEXT
           )`
         ),
+        // Recent chat sends, used to throttle spam from guests.
+        db.execute(
+          `CREATE TABLE IF NOT EXISTS chat_rate_events (
+            key TEXT NOT NULL,
+            created_at TEXT NOT NULL DEFAULT (datetime('now'))
+          )`
+        ),
         // Admin-created special events with their own deposit-bonus rules.
         db.execute(
           `CREATE TABLE IF NOT EXISTS events (

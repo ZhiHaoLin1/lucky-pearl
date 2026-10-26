@@ -3,12 +3,24 @@ import { verifyKey, InteractionType, InteractionResponseType } from 'discord-int
 import { db, ensureSchema } from '@/lib/db';
 import { formatCents } from '@/lib/vip';
 import { methodLabel } from '@/lib/withdrawalMethods';
+import { saveSupportReply, MAX_CHAT_MESSAGE_LENGTH } from '@/lib/chat';
+import { REPLY_BUTTON_PREFIX, REPLY_MODAL_PREFIX, conversationLabel } from '@/lib/discordChat';
 
 type DiscordOption = { name: string; value: string; focused?: boolean };
 type DiscordInteraction = {
   type: number;
-  data?: { name?: string; options?: DiscordOption[] };
+  data?: {
+    name?: string;
+    options?: DiscordOption[];
+    custom_id?: string;
+    components?: Array<{ components?: Array<{ custom_id?: string; value?: string }> }>;
+  };
+  member?: { user?: { id?: string; username?: string } };
+  user?: { id?: string; username?: string };
 };
+
+const ephemeral = (content: string) =>
+  NextResponse.json({ type: 4, data: { content, flags: 64, allowed_mentions: { parse: [] } } });
 
 export async function POST(request: Request) {
   const publicKey = process.env.DISCORD_PUBLIC_KEY;
@@ -100,6 +112,56 @@ export async function POST(request: Request) {
         content: `✅ Marked **${formatCents(Number(row.amount_cents))}** to **${row.full_name}** (${methodLabel(
           row.method
         )} → ${row.payout_detail}) as completed.`,
+      },
+    });
+  }
+
+  // Customer chat: staff press "Reply" on a customer's message, type in the popup,
+  // and the reply shows up in that customer's chat bubble.
+  if (interaction.type === InteractionType.MESSAGE_COMPONENT && interaction.data?.custom_id?.startsWith(REPLY_BUTTON_PREFIX)) {
+    const conversationId = interaction.data.custom_id.slice(REPLY_BUTTON_PREFIX.length);
+    const label = await conversationLabel(conversationId);
+    return NextResponse.json({
+      type: 9, // MODAL
+      data: {
+        custom_id: REPLY_MODAL_PREFIX + conversationId,
+        title: `Reply to ${label}`.slice(0, 45),
+        components: [
+          {
+            type: 1,
+            components: [
+              {
+                type: 4, // text input
+                custom_id: 'reply_text',
+                label: 'Your reply',
+                style: 2, // paragraph
+                min_length: 1,
+                max_length: MAX_CHAT_MESSAGE_LENGTH,
+                required: true,
+              },
+            ],
+          },
+        ],
+      },
+    });
+  }
+
+  if (interaction.type === InteractionType.MODAL_SUBMIT && interaction.data?.custom_id?.startsWith(REPLY_MODAL_PREFIX)) {
+    const conversationId = interaction.data.custom_id.slice(REPLY_MODAL_PREFIX.length);
+    const text = String(interaction.data.components?.[0]?.components?.[0]?.value ?? '').trim();
+    const staff = interaction.member?.user ?? interaction.user;
+    if (!text || !staff?.id) {
+      return ephemeral('⚠️ Nothing to send.');
+    }
+
+    const label = await conversationLabel(conversationId);
+    await saveSupportReply(conversationId, staff.id, text.slice(0, MAX_CHAT_MESSAGE_LENGTH));
+    // Public (not ephemeral) so the rest of the team can see it was answered.
+    return NextResponse.json({
+      type: 4,
+      data: {
+        content: `↩️ **${staff.username ?? 'Staff'}** replied to **${label}**:\n> ${text.slice(0, 500).replace(/\n/g, '\n> ')}`,
+        allowed_mentions: { parse: [] },
       },
     });
   }

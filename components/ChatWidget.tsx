@@ -49,12 +49,13 @@ const normalize = (rows: ApiMessage[]): ChatMessage[] =>
     unread: Boolean(row.sender_admin_id) && !row.read_at,
   }));
 
-// Sticky customer chat. Lives in the root layout, so it stays put (and keeps its
-// state) while customers move between pages and dashboard tabs. It reads and
-// writes the same messages as the dashboard Inbox, so replies from /admin show up here.
+// Sticky chat for everyone, logged in or not. Lives in the root layout, so it stays put
+// (and keeps its state) while visitors move between pages and dashboard tabs. Messages
+// go to the Discord support channel; replies typed there show up here.
 export default function ChatWidget() {
   const pathname = usePathname();
   const [enabled, setEnabled] = useState(false);
+  const [isGuest, setIsGuest] = useState(true);
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [draft, setDraft] = useState('');
@@ -73,19 +74,22 @@ export default function ChatWidget() {
     } catch {}
   }, []);
 
-  // Only signed-in customers get the chat. Re-check on navigation so logging in
-  // or out (which changes the page) turns it on or off without a reload.
+  // Everyone gets the chat except admins (who reply from Discord or /admin). Re-check on
+  // navigation so logging in or out switches between guest and account chat without a reload.
   useEffect(() => {
     let cancelled = false;
     fetch('/api/auth/me')
       .then((res) => res.json())
       .then((data) => {
         if (cancelled) return;
-        const isCustomer = Boolean(data?.loggedIn) && data?.role !== 'admin';
-        setEnabled(isCustomer);
-        if (!isCustomer) setMessages([]);
+        const isAdmin = data?.role === 'admin';
+        setEnabled(!isAdmin);
+        setIsGuest(!data?.loggedIn);
+        if (isAdmin) setMessages([]);
       })
-      .catch(() => {});
+      .catch(() => {
+        if (!cancelled) setEnabled(true);
+      });
     return () => {
       cancelled = true;
     };
@@ -222,9 +226,14 @@ export default function ChatWidget() {
             className="flex-1 min-h-0 overflow-y-auto px-3 py-3 space-y-2"
           >
             {messages.length === 0 ? (
-              <p className="text-pearl-300/60 text-sm text-center mt-8 px-4">
-                No messages yet. Ask us anything about deposits, cashouts or your account.
-              </p>
+              <div className="text-pearl-300/60 text-sm text-center mt-8 px-4 space-y-2">
+                <p>No messages yet. Ask us anything about deposits, cashouts or your account.</p>
+                {isGuest && (
+                  <p className="text-xs">
+                    Not logged in? Add your phone number or email in your message so we can reach you if you close this page.
+                  </p>
+                )}
+              </div>
             ) : (
               messages.map((message) => (
                 <div key={message.id} className={`flex ${message.fromSupport ? 'justify-start' : 'justify-end'}`}>

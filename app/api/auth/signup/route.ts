@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import { NextResponse } from 'next/server';
 import { db, ensureSchema } from '@/lib/db';
 import { attachSessionCookie } from '@/lib/auth';
+import { claimGuestMessages } from '@/lib/chat';
 import { verifyTurnstileToken } from '@/lib/turnstile';
 import { isValidBirthday } from '@/lib/bonuses';
 
@@ -107,6 +108,7 @@ export async function POST(request: Request) {
 
     const response = NextResponse.json({ ok: true, fullName });
     await attachSessionCookie(response, id);
+    await claimGuestMessages(response, id);
     return response;
   } catch {
     return NextResponse.json(
