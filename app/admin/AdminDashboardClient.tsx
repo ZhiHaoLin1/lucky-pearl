@@ -10,6 +10,7 @@ import BonusesPanel from './BonusesPanel';
 import EventsPanel from './EventsPanel';
 import DuplicatesPanel from './DuplicatesPanel';
 import ReferralsPanel from './ReferralsPanel';
+import AddCustomerModal from './AddCustomerModal';
 
 export type AdminCustomer = {
   id: string;
@@ -50,6 +51,7 @@ export default function AdminDashboardClient({
   initialReferralCount?: number;
 }) {
   const [customers, setCustomers] = useState(initialCustomers);
+  const [addOpen, setAddOpen] = useState(false);
   const [checkedIds, setCheckedIds] = useState<Set<string>>(new Set());
   const [activeId, setActiveId] = useState<string | null>(initialCustomers[0]?.id ?? null);
   const [messages, setMessages] = useState<AdminMessage[]>([]);
@@ -266,15 +268,37 @@ export default function AdminDashboardClient({
     }
   };
 
+  const addCustomerModal = addOpen ? (
+    <AddCustomerModal
+      onClose={() => setAddOpen(false)}
+      onCreated={(customer) => {
+        setCustomers((prev) => [customer, ...prev]);
+        setActiveId(customer.id);
+        setView('customers');
+      }}
+    />
+  ) : null;
+
   if (customers.length === 0) {
     return (
-      <div className="rounded-2xl border border-gold-600/25 bg-navy-800/60 p-8 text-center text-pearl-300/70">
-        No customer accounts yet.
-      </div>
+      <>
+        <div className="rounded-2xl border border-gold-600/25 bg-navy-800/60 p-8 text-center text-pearl-300/70">
+          <p className="mb-4">No customer accounts yet.</p>
+          <button
+            type="button"
+            onClick={() => setAddOpen(true)}
+            className="px-5 py-2.5 rounded-lg text-sm font-bold bg-gold-400 text-navy-900 hover:bg-gold-300"
+          >
+            Add a customer
+          </button>
+        </div>
+        {addCustomerModal}
+      </>
     );
   }
 
   return (
+    <>
     <div>
       <div className="flex gap-2 mb-5 border-b border-white/10 overflow-x-auto overflow-y-hidden">
         {(['customers', 'broadcast', 'square', 'email', 'bonuses', 'events', 'duplicates', 'referrals'] as const).map((key) => (
@@ -346,6 +370,13 @@ export default function AdminDashboardClient({
           to select several for bulk actions.
         </p>
         <div className="flex items-center gap-3 text-sm">
+          <button
+            type="button"
+            onClick={() => setAddOpen(true)}
+            className="px-3 py-1.5 rounded-lg text-xs font-bold bg-gold-400 text-navy-900 hover:bg-gold-300"
+          >
+            + Add customer
+          </button>
           <button type="button" onClick={selectAll} className="text-gold-400 hover:text-gold-300">
             Select all
           </button>
@@ -635,5 +666,7 @@ export default function AdminDashboardClient({
       </div>
       )}
     </div>
+    {addCustomerModal}
+    </>
   );
 }
