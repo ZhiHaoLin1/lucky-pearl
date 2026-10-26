@@ -50,7 +50,7 @@ export default function ReferralLanding({
 
         {!code && (
           <p className="text-pearl-300/60 text-sm mt-5">
-            Don’t have a personal link? Ask the friend who told you about us to send theirs, so you both get credit.
+            Got a friend’s invite link? Open it, or type its code in the sign-up form, so you both get credit.
           </p>
         )}
 

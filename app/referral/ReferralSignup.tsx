@@ -27,6 +27,8 @@ export default function ReferralSignup({
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ fullName: '', email: '', phone: '', password: '', confirmPassword: '', birthMonth: '', birthDay: '' });
   const [adultConfirmed, setAdultConfirmed] = useState(false);
+  // On the page without a personal link, a friend's invite code can be typed in instead.
+  const [typedCode, setTypedCode] = useState('');
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const turnstileRef = useRef<TurnstileHandle>(null);
   const [saving, setSaving] = useState(false);
@@ -43,13 +45,19 @@ export default function ReferralSignup({
     if (!adultConfirmed) return setError('Please confirm you are 18 or older.');
     if (TURNSTILE_SITE_KEY && !turnstileToken) return setError('Please complete the verification challenge.');
 
+    const typed = typedCode.trim().toUpperCase();
+    if (!code && typed && !/^[A-Z2-9]{8}$/.test(typed)) {
+      return setError('That invite code doesn’t look right. It has 8 letters and numbers, or leave it empty.');
+    }
+    const refCode = code ?? (typed || undefined);
+
     setSaving(true);
     try {
       const response = await fetch(`${mainSiteUrl}/api/auth/signup`, {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...form, turnstileToken, refCode: code ?? undefined, adultConfirmed }),
+        body: JSON.stringify({ ...form, turnstileToken, refCode, adultConfirmed }),
       });
       const text = await response.text();
       let data: { error?: string; handoffToken?: string } = {};
@@ -77,7 +85,6 @@ export default function ReferralSignup({
       <a
         href={code ? `${mainSiteUrl}/?ref=${code}` : mainSiteUrl || '/'}
         onClick={(event) => {
-          if (!code) return; // no personal link: just go to the main site
           event.preventDefault();
           setOpen(true);
         }}
@@ -109,6 +116,22 @@ export default function ReferralSignup({
                     <div className="rounded-xl border border-gold-500/40 bg-gold-500/10 px-4 py-3 text-sm text-pearl-100">
                       🎁 <span className="font-semibold text-gold-400">{referrerFirstName}</span> invited you. Sign up to get $10 in free game credit.
                     </div>
+                  )}
+                  {!code && (
+                    <label className="block">
+                      <span className="text-pearl-200 text-sm font-medium mb-1.5 block">Friend’s invite code (optional)</span>
+                      <input
+                        className={`${inputClass} uppercase tracking-widest`}
+                        value={typedCode}
+                        onChange={(e) => setTypedCode(e.target.value)}
+                        placeholder="e.g. AB3K9XQ2"
+                        maxLength={8}
+                        autoComplete="off"
+                      />
+                      <span className="text-pearl-300/60 text-xs mt-1.5 block">
+                        It’s the 8 letters and numbers at the end of your friend’s link. Without one you still get an account, but not the invite bonus.
+                      </span>
+                    </label>
                   )}
                   <label className="block">
                     <span className="text-pearl-200 text-sm font-medium mb-1.5 block">Full name</span>
