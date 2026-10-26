@@ -12,7 +12,7 @@ export default function ReferralBanner({ showCredit, locked }: { showCredit: boo
         <p className="text-pearl-100 text-sm">
           You have <span className="text-gold-400 font-bold">${REFEREE_CREDIT_CENTS / 100} in free game credit</span> waiting. Text{' '}
           <a href="sms:+14077968311" className="text-gold-400 underline underline-offset-2 font-semibold">
-            407-796-8311
+            (407) 796-8311
           </a>{' '}
           and we’ll add it to your game account.
         </p>

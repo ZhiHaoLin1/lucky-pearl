@@ -58,7 +58,13 @@ export default function ReferralLanding({
           <h2 className="text-pearl-100 font-bold text-base text-center">How it works</h2>
           <ol className="list-decimal pl-5 space-y-1.5">
             <li>Tap the button and create your free account.</li>
-            <li>We add your {dollars(REFEREE_CREDIT_CENTS)} game credit. Just text us once you’re signed up.</li>
+            <li>
+              We add your {dollars(REFEREE_CREDIT_CENTS)} game credit. Just text us at{' '}
+              <a href="sms:+14077968311" className="text-gold-400 underline underline-offset-2 font-semibold whitespace-nowrap">
+                (407) 796-8311
+              </a>{' '}
+              once you’re signed up.
+            </li>
             <li>Make your first deposit of {dollars(REFERRAL_MIN_PURCHASE_CENTS)} or more to unlock cashouts. Your friend gets rewarded too.</li>
           </ol>
         </div>
