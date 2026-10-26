@@ -75,6 +75,16 @@ export function normalizeEmail(email: string) {
 
 const normalizeName = (name: string) => name.toLowerCase().replace(/[^a-z]/g, '');
 
+/** A payout destination in a comparable form: cashtags lowercase without "$", phones as 10 digits, emails normalised. */
+export function normalizePayoutDestination(detail: string) {
+  const value = detail.trim().toLowerCase();
+  if (!value) return '';
+  if (value.includes('@')) return normalizeEmail(value);
+  const phone = normalizePhone(value);
+  if (phone) return `phone:${phone}`;
+  return value.replace(/^\$/, '');
+}
+
 // ---------------------------------------------------------------------------
 // Finding groups of accounts that look like the same person
 // ---------------------------------------------------------------------------
@@ -108,6 +118,13 @@ export async function findDuplicateGroups(): Promise<DuplicateGroup[]> {
      FROM users u WHERE u.role != 'admin'`
   );
   const devicesResult = await db.execute('SELECT user_id, device_id, ip_hash, ua_hash FROM account_devices');
+  const payoutsResult = await db.execute('SELECT user_id, payout_detail FROM withdrawals');
+  // Payer names come from the payment emails (stored on the deposit, or still on the review queue entry).
+  const payersResult = await db.execute(
+    `SELECT d.user_id, COALESCE(d.payer_name, e.parsed_name) AS payer
+     FROM deposits d LEFT JOIN email_unmatched_payments e ON e.email_message_id = d.email_message_id
+     WHERE COALESCE(d.payer_name, e.parsed_name) IS NOT NULL`
+  );
 
   const users = usersResult.rows.map((row) => {
     const override = row.tier_override ? VIP_TIERS.find((t) => t.name === String(row.tier_override)) : undefined;
@@ -160,6 +177,23 @@ export async function findDuplicateGroups(): Promise<DuplicateGroup[]> {
     uaHash: String(row.ua_hash),
   }));
   link(bucketBy(devices.map((d) => ({ key: d.deviceId, id: d.userId }))), 'Used the same device', true);
+  // Money trail: the same cash-out destination, or the same person paying for several accounts.
+  link(
+    bucketBy(payoutsResult.rows.map((row) => ({ key: normalizePayoutDestination(String(row.payout_detail ?? '')), id: String(row.user_id) }))),
+    'Cashes out to the same account',
+    true
+  );
+  link(
+    bucketBy(
+      payersResult.rows.map((row) => {
+        const name = normalizeName(String(row.payer ?? ''));
+        // One short or one-word name is too common to mean anything.
+        return { key: name.length >= 6 && String(row.payer).trim().includes(' ') ? name : '', id: String(row.user_id) };
+      })
+    ),
+    'Paid from the same payer name',
+    false
+  );
   // Same network AND same browser is a decent hint even without a shared cookie; IP alone is not
   // (households, cafes and mobile carriers share addresses), so it never forms a group by itself.
   link(

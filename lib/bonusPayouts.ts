@@ -1,7 +1,7 @@
 import { db } from './db';
 import { toSqliteDateTime } from './easternDay';
 import { getTierForDeposits, VIP_TIERS } from './vip';
-import { listBirthdayWindows, listHolidayWindows, type BonusWindow } from './bonuses';
+import { accountOldEnoughForBonus, listBirthdayWindows, listHolidayWindows, type BonusWindow } from './bonuses';
 import { getEventWindows } from './events';
 import { getOpenDuplicateGroups } from './accountSignals';
 
@@ -58,7 +58,7 @@ export async function getBonusPayoutRows(
   only?: { userId: string; bonusKey: string }
 ): Promise<BonusPayoutRow[]> {
   const usersResult = await db.execute(
-    `SELECT u.id, u.full_name, u.username, u.phone, u.birthday, u.birthday_set_at, u.tier_override,
+    `SELECT u.id, u.full_name, u.username, u.phone, u.birthday, u.birthday_set_at, u.tier_override, u.created_at,
             COALESCE((SELECT SUM(amount_cents) FROM deposits d WHERE d.user_id = u.id), 0) AS lifetime
      FROM users u WHERE u.role != 'admin'`
   );
@@ -78,6 +78,7 @@ export async function getBonusPayoutRows(
         phone: String(row.phone),
         birthday: row.birthday ? String(row.birthday) : null,
         birthdaySetAt: row.birthday_set_at ? String(row.birthday_set_at) : null,
+        createdAt: String(row.created_at),
         tierIndex: tierIndexByName(tier.name),
       };
     });
@@ -86,6 +87,8 @@ export async function getBonusPayoutRows(
   const { byUser: duplicateByUser } = await getOpenDuplicateGroups();
   const pushRow = (user: (typeof users)[number], window: BonusWindow, deposits: number) => {
     if (user.tierIndex < tierIndexByName(window.minTier)) return;
+    // New accounts don't qualify (unless a payout was already recorded for them).
+    if (!accountOldEnoughForBonus(user.createdAt, window) && !paid.get(`${user.id}|${window.key}`)) return;
     const qualifyingDeposits = Math.min(window.maxDeposits, deposits);
     const earnedCents = qualifyingDeposits * window.perDepositCents;
     const paidCents = paid.get(`${user.id}|${window.key}`) ?? 0;

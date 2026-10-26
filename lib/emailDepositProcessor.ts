@@ -115,9 +115,9 @@ export async function processDepositEmail({
 
   const userId = String(match.customer.id);
   await db.execute({
-    sql: `INSERT INTO deposits (id, user_id, amount_cents, method, email_message_id)
-          VALUES (?, ?, ?, ?, ?)`,
-    args: [randomUUID(), userId, parsed.amountCents, parsed.source, messageId],
+    sql: `INSERT INTO deposits (id, user_id, amount_cents, method, email_message_id, payer_name)
+          VALUES (?, ?, ?, ?, ?, ?)`,
+    args: [randomUUID(), userId, parsed.amountCents, parsed.source, messageId, parsed.name || null],
   });
 
   return { status: 'matched', userId };

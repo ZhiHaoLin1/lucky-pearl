@@ -97,7 +97,7 @@ export default function BonusTab({
         </p>
         <p className="text-pearl-300/60 text-xs">
           Terms: {dollars(perDepositCents)} bonus on each of your next {maxDeposits} deposits of {dollars(minDepositCents)} or
-          more (up to {dollars(maxBonusCents)} total), valid {validLabel}.
+          more (up to {dollars(maxBonusCents)} total), valid {validLabel}. Your account must be at least 3 days old when the bonus period starts.
         </p>
       </div>
     </div>

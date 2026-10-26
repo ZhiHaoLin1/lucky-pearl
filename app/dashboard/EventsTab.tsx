@@ -97,7 +97,7 @@ export default function EventsTab({ events, member }: { events: EventCard[]; mem
           <div>
             <p className="text-pearl-100 font-semibold">🎂 Birthday bonus</p>
             <p className="text-pearl-300/70">
-              On your birthday week, earn $5 on each of your next 5 deposits of $10 or more (up to $25). Jade members and above.
+              On your birthday week, earn $5 on each of your next 5 deposits of $10 or more (up to $25). Jade members and above. Your account must be at least 3 days old when the week starts.
             </p>
             <p className="text-pearl-300/70 mt-1">
               {!member.birthdayEligible
@@ -111,7 +111,7 @@ export default function EventsTab({ events, member }: { events: EventCard[]; mem
             <p className="text-pearl-100 font-semibold">🎉 Holiday bonus</p>
             <p className="text-pearl-300/70">
               On 6 major holidays a year, earn $5 on each of your next 5 deposits of $10 or more (up to $25) during the holiday week. Gold
-              members and above.
+              members and above. Your account must be at least 3 days old when the week starts.
             </p>
             <p className="text-pearl-300/70 mt-1">
               {member.holidayEligible ? `Next up: ${member.nextHolidayLabel}.` : 'Reach Gold to unlock it.'}

@@ -69,9 +69,9 @@ export async function POST(request: Request) {
       }
 
       await db.execute({
-        sql: `INSERT INTO deposits (id, user_id, amount_cents, method, email_message_id, recorded_by_admin_id)
-              VALUES (?, ?, ?, ?, ?, ?)`,
-        args: [randomUUID(), userId, amountCents, row.source, row.email_message_id, sessionUser.id],
+        sql: `INSERT INTO deposits (id, user_id, amount_cents, method, email_message_id, recorded_by_admin_id, payer_name)
+              VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        args: [randomUUID(), userId, amountCents, row.source, row.email_message_id, sessionUser.id, row.parsed_name ? String(row.parsed_name) : null],
       });
     }
 

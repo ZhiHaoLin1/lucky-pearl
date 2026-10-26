@@ -9,6 +9,16 @@ export const MAX_BONUS_DEPOSITS = 5;
 export const BONUS_WINDOW_DAYS = 7;
 export const MAX_BONUS_CENTS = BONUS_PER_DEPOSIT_CENTS * MAX_BONUS_DEPOSITS;
 
+// Anti-abuse: an account has to be at least this old when the bonus period starts,
+// so a freshly made extra account can't pick up a holiday, birthday or event bonus.
+export const BONUS_MIN_ACCOUNT_AGE_DAYS = 3;
+
+/** `createdAt` is the users.created_at string ("YYYY-MM-DD HH:MM:SS", UTC). */
+export function accountOldEnoughForBonus(createdAt: string, window: { startUtc: Date }): boolean {
+  const created = new Date(createdAt.replace(' ', 'T') + 'Z').getTime();
+  return created + BONUS_MIN_ACCOUNT_AGE_DAYS * 24 * 60 * 60 * 1000 <= window.startUtc.getTime();
+}
+
 const EASTERN_TIMEZONE = 'America/New_York';
 
 type Ymd = { year: number; month: number; day: number };

@@ -183,7 +183,7 @@ export default function EventsPanel() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <p className="text-pearl-300/60 text-sm">
             Each customer can earn up to <span className="text-gold-400 font-semibold">{totalBonusLabel}</span>. The tab shows
-            for the whole time the event runs.
+            for the whole time the event runs. Accounts must be at least 3 days old when the event starts.
           </p>
           <button
             type="submit"

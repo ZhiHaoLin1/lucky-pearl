@@ -12,6 +12,7 @@ import {
   getActiveHolidayWindow,
   getNextHoliday,
   getBonusProgress,
+  accountOldEnoughForBonus,
   type BonusWindow,
 } from '@/lib/bonuses';
 import VIPSection from '@/components/VIPSection';
@@ -108,7 +109,7 @@ export default async function DashboardPage() {
   };
 
   const holidayWindow = isGoldOrAbove ? getActiveHolidayWindow() : null;
-  if (holidayWindow) {
+  if (holidayWindow && accountOldEnoughForBonus(user.createdAt, holidayWindow)) {
     await addBonusTab(
       'bonus-holiday',
       `${holidayWindow.emoji} Holiday Bonus`,
@@ -118,7 +119,7 @@ export default async function DashboardPage() {
     );
   }
   const birthdayWindow = currentTierIndex >= jadeIndex ? getActiveBirthdayWindow(user.birthday, user.birthdaySetAt) : null;
-  if (birthdayWindow) {
+  if (birthdayWindow && accountOldEnoughForBonus(user.createdAt, birthdayWindow)) {
     await addBonusTab(
       'bonus-birthday',
       '🎂 Birthday Bonus',
@@ -130,7 +131,7 @@ export default async function DashboardPage() {
 
   for (const eventWindow of await getEventWindows()) {
     const minTierIndex = VIP_TIERS.findIndex((tier) => tier.name === eventWindow.minTier);
-    if (currentTierIndex < minTierIndex) continue;
+    if (currentTierIndex < minTierIndex || !accountOldEnoughForBonus(user.createdAt, eventWindow)) continue;
     await addBonusTab(
       `bonus-${eventWindow.key}`,
       `${eventWindow.emoji} ${eventWindow.title}`,
@@ -164,7 +165,9 @@ export default async function DashboardPage() {
         maxDeposits: event.maxDeposits,
         minTierLabel: tierLabel,
         minTierName: event.minTier,
-        eligible: currentTierIndex >= minTierIndex,
+        eligible:
+          currentTierIndex >= minTierIndex &&
+          accountOldEnoughForBonus(user.createdAt, { startUtc: new Date(event.startsAt) }),
       };
     })
     // Events above the customer's tier are hidden entirely so they don't cause confusion.

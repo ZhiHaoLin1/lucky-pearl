@@ -220,6 +220,10 @@ export function ensureSchema() {
       }
       // For deposits auto-matched from a Venmo/Zelle notification email —
       // dedup key, parallel to square_payment_id.
+      // The payer name parsed from a Venmo/Zelle email, kept so accounts paid by the same person can be spotted.
+      if (!depositColumnNames.has('payer_name')) {
+        await db.execute('ALTER TABLE deposits ADD COLUMN payer_name TEXT');
+      }
       if (!depositColumnNames.has('email_message_id')) {
         await db.execute('ALTER TABLE deposits ADD COLUMN email_message_id TEXT');
       }
