@@ -115,6 +115,28 @@ export function ensureSchema() {
             resolved_by_admin_id TEXT
           )`
         ),
+        // Devices / networks each account has logged in or signed up from (hashed), for spotting duplicates.
+        db.execute(
+          `CREATE TABLE IF NOT EXISTS account_devices (
+            user_id TEXT NOT NULL,
+            device_id TEXT NOT NULL,
+            ip_hash TEXT NOT NULL DEFAULT '',
+            ua_hash TEXT NOT NULL DEFAULT '',
+            user_agent TEXT,
+            first_seen_at TEXT NOT NULL DEFAULT (datetime('now')),
+            last_seen_at TEXT NOT NULL DEFAULT (datetime('now')),
+            seen_count INTEGER NOT NULL DEFAULT 1,
+            PRIMARY KEY (user_id, device_id, ip_hash)
+          )`
+        ),
+        // Duplicate-account groups an admin has reviewed and cleared.
+        db.execute(
+          `CREATE TABLE IF NOT EXISTS duplicate_reviews (
+            group_key TEXT PRIMARY KEY,
+            reviewed_by_admin_id TEXT,
+            reviewed_at TEXT NOT NULL DEFAULT (datetime('now'))
+          )`
+        ),
         // Recent chat sends, used to throttle spam from guests.
         db.execute(
           `CREATE TABLE IF NOT EXISTS chat_rate_events (

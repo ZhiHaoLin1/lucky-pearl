@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { db, ensureSchema } from '@/lib/db';
 import { attachSessionCookie } from '@/lib/auth';
 import { claimGuestMessages } from '@/lib/chat';
+import { recordAccountSignals } from '@/lib/accountSignals';
 
 type LoginPayload = {
   email?: string;
@@ -42,6 +43,7 @@ export async function POST(request: Request) {
     const response = NextResponse.json({ ok: true, fullName: row.full_name, role: row.role });
     await attachSessionCookie(response, String(row.id));
     await claimGuestMessages(response, String(row.id));
+    await recordAccountSignals(request, response, String(row.id));
     return response;
   } catch {
     return NextResponse.json(

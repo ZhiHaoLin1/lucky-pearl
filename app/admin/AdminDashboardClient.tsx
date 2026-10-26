@@ -1,12 +1,13 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { AlertTriangle, AtSign, CalendarDays, Check, Gift, Mail, MailWarning, Megaphone, Pencil, Phone, Send, Trash2, Users } from 'lucide-react';
+import { AlertTriangle, AtSign, CalendarDays, Check, Copy, Gift, Mail, MailWarning, Megaphone, Pencil, Phone, Send, Trash2, Users } from 'lucide-react';
 import AdminFinancePanel from './AdminFinancePanel';
 import SquareQueuePanel from './SquareQueuePanel';
 import EmailQueuePanel from './EmailQueuePanel';
 import BonusesPanel from './BonusesPanel';
 import EventsPanel from './EventsPanel';
+import DuplicatesPanel from './DuplicatesPanel';
 
 export type AdminCustomer = {
   id: string;
@@ -36,11 +37,13 @@ export default function AdminDashboardClient({
   initialSquareQueueCount = 0,
   initialEmailQueueCount = 0,
   initialBonusOwedCount = 0,
+  initialDuplicateCount = 0,
 }: {
   customers: AdminCustomer[];
   initialSquareQueueCount?: number;
   initialEmailQueueCount?: number;
   initialBonusOwedCount?: number;
+  initialDuplicateCount?: number;
 }) {
   const [customers, setCustomers] = useState(initialCustomers);
   const [checkedIds, setCheckedIds] = useState<Set<string>>(new Set());
@@ -52,13 +55,14 @@ export default function AdminDashboardClient({
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [detailTab, setDetailTab] = useState<'messages' | 'finance'>('messages');
-  const [view, setView] = useState<'customers' | 'broadcast' | 'square' | 'email' | 'bonuses' | 'events'>('customers');
+  const [view, setView] = useState<'customers' | 'broadcast' | 'square' | 'email' | 'bonuses' | 'events' | 'duplicates'>('customers');
   const [broadcastBody, setBroadcastBody] = useState('');
   const [isBroadcasting, setIsBroadcasting] = useState(false);
   const [broadcastMessage, setBroadcastMessage] = useState<string | null>(null);
   const [squareQueueCount, setSquareQueueCount] = useState(initialSquareQueueCount);
   const [emailQueueCount, setEmailQueueCount] = useState(initialEmailQueueCount);
   const [bonusOwedCount, setBonusOwedCount] = useState(initialBonusOwedCount);
+  const [duplicateCount, setDuplicateCount] = useState(initialDuplicateCount);
   const [isEditingUsername, setIsEditingUsername] = useState(false);
   const [usernameDraft, setUsernameDraft] = useState('');
   const [isSavingUsername, setIsSavingUsername] = useState(false);
@@ -268,7 +272,7 @@ export default function AdminDashboardClient({
   return (
     <div>
       <div className="flex gap-2 mb-5 border-b border-white/10 overflow-x-auto overflow-y-hidden">
-        {(['customers', 'broadcast', 'square', 'email', 'bonuses', 'events'] as const).map((key) => (
+        {(['customers', 'broadcast', 'square', 'email', 'bonuses', 'events', 'duplicates'] as const).map((key) => (
           <button
             key={key}
             type="button"
@@ -285,6 +289,7 @@ export default function AdminDashboardClient({
             {key === 'email' && <MailWarning className="w-4 h-4" />}
             {key === 'bonuses' && <Gift className="w-4 h-4" />}
             {key === 'events' && <CalendarDays className="w-4 h-4" />}
+            {key === 'duplicates' && <Copy className="w-4 h-4" />}
             {key === 'customers'
               ? 'Customers'
               : key === 'broadcast'
@@ -295,10 +300,17 @@ export default function AdminDashboardClient({
               ? 'Email Queue'
               : key === 'bonuses'
               ? 'Bonuses'
-              : 'Events'}
+              : key === 'events'
+              ? 'Events'
+              : 'Duplicates'}
             {key === 'square' && squareQueueCount > 0 && (
               <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-gold-500/20 text-gold-400">
                 {squareQueueCount}
+              </span>
+            )}
+            {key === 'duplicates' && duplicateCount > 0 && (
+              <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-300">
+                {duplicateCount}
               </span>
             )}
             {key === 'bonuses' && bonusOwedCount > 0 && (
@@ -393,6 +405,8 @@ export default function AdminDashboardClient({
         <BonusesPanel onCountChange={setBonusOwedCount} />
       ) : view === 'events' ? (
         <EventsPanel />
+      ) : view === 'duplicates' ? (
+        <DuplicatesPanel onCountChange={setDuplicateCount} />
       ) : (
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-1 rounded-2xl border border-gold-600/25 bg-navy-800/60 overflow-hidden">

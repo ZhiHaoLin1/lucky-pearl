@@ -3,6 +3,7 @@ import { toSqliteDateTime } from './easternDay';
 import { getTierForDeposits, VIP_TIERS } from './vip';
 import { listBirthdayWindows, listHolidayWindows, type BonusWindow } from './bonuses';
 import { getEventWindows } from './events';
+import { getOpenDuplicateGroups } from './accountSignals';
 
 // How long after a bonus week ends an unpaid bonus still shows up for the admin.
 const LOOKBACK_DAYS = 30;
@@ -24,6 +25,8 @@ export type BonusPayoutRow = {
   earnedCents: number;
   paidCents: number;
   owedCents: number;
+  // Set when this customer is in an unreviewed possible-duplicate group.
+  duplicateWarning: string | null;
 };
 
 const tierIndexByName = (name: string) => VIP_TIERS.findIndex((tier) => tier.name === name);
@@ -80,6 +83,7 @@ export async function getBonusPayoutRows(
     });
 
   const rows: BonusPayoutRow[] = [];
+  const { byUser: duplicateByUser } = await getOpenDuplicateGroups();
   const pushRow = (user: (typeof users)[number], window: BonusWindow, deposits: number) => {
     if (user.tierIndex < tierIndexByName(window.minTier)) return;
     const qualifyingDeposits = Math.min(window.maxDeposits, deposits);
@@ -103,6 +107,12 @@ export async function getBonusPayoutRows(
       earnedCents,
       paidCents,
       owedCents: Math.max(0, earnedCents - paidCents),
+      duplicateWarning: (() => {
+        const group = duplicateByUser.get(user.id);
+        if (!group) return null;
+        const others = group.accounts.filter((account) => account.id !== user.id).map((account) => account.fullName);
+        return `Possible duplicate of ${others.join(', ')} (${group.reasons.join('; ')})`;
+      })(),
     });
   };
 

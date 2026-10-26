@@ -115,6 +115,9 @@ export default function BonusesPanel({ onCountChange }: { onCountChange: (count:
                     {row.fullName}
                     {row.username && <span className="text-pearl-300/50 font-normal"> · {row.username}</span>}
                   </p>
+                  {row.duplicateWarning && (
+                    <p className="text-amber-300 text-xs font-semibold mb-0.5">⚠ {row.duplicateWarning}. Check the Duplicates tab before paying.</p>
+                  )}
                   <p className="text-pearl-300/60 text-sm">
                     {row.emoji} {row.title} · {dateLabel(row.startsAt)}–{dateLabel(row.endsAt, -60 * 60 * 1000)}
                     {row.isActive && <span className="ml-2 text-gold-400 text-xs font-semibold">STILL OPEN</span>}
